@@ -1,7 +1,7 @@
 /**
  * @file qx.js.null.c
  * @brief Source file of the QxJsNull class.
- * @author Romain Déoux <romain.deoux@gmail.com>
+ * @author Romain DEOUX
  */
 
 #include <stdlib.h>

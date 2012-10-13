@@ -1,7 +1,7 @@
 /**
  * @file qx.js.value.private.h
  * @brief Private header of the QxJsValue class.
- * @author Romain Déoux <romain.deoux@gmail.com>
+ * @author Romain DEOUX
  */
 
 #ifndef _H_QX_JS_VALUE_PRIVATE_H

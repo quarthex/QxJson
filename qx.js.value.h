@@ -1,7 +1,7 @@
 /**
  * @file qx.js.value.h
  * @brief Header file of the QxJsValue class
- * @author Romain Déoux <romain.deoux@gmail.com>
+ * @author Romain DEOUX
  */
 
 #ifndef _H_QX_JS_VALUE

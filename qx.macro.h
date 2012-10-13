@@ -1,7 +1,7 @@
 /**
  * @file qx.macro.h
  * @brief Various preprocessor macros used by the project.
- * @author Romain Déoux <romain.deoux@gmail.com>
+ * @author Romain DEOUX
  */
 
 #ifndef _H_QX_MACRO

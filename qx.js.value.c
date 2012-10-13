@@ -1,7 +1,7 @@
 /**
  * @file qx.js.value.c
  * @brief Source file of the QxJsValue class
- * @author Romain Déoux <romain.deoux@gmail.com>
+ * @author Romain DEOUX
  */
 
 #include <assert.h>

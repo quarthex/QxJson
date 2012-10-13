@@ -1,7 +1,7 @@
 /**
  * @file test.c
  * @brief Testing source file.
- * @author Romain Déoux <romain.deoux@gmail.com>
+ * @author Romain DEOUX
  */
 
 #include <stdio.h>
