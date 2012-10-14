@@ -3,13 +3,17 @@ CFLAGS = -fpic -W -Wall -pedantic -Os -O3 -pipe -DQX_JSON_BUILD
 LD = gcc
 LDFLAGS = -shared
 
+SOURCES = \
+	qx.js.value.c \
+	qx.js.null.c \
+	qx.js.true.c \
+	qx.js.false.c
+OBJECTS = $(SOURCES:.c=.o)
+
 all: libqxjson.so
 
 clean:
-	rm -fv qx.js.value.o;
-	rm -fv qx.js.null.o;
-	rm -fv qx.js.true.o;
-	rm -fv qx.js.false.o;
+	rm -fv $(OBJECTS);
 
 distclean: clean
 	rm -fv libqxjson.so;
@@ -24,6 +28,6 @@ test: test.c all
 %.o: %.c
 	$(CC) $(CFLAGS) -o $@ -c $<;
 
-libqxjson.so: qx.js.value.o qx.js.null.o qx.js.true.o qx.js.false.o
+libqxjson.so: $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $^;
 
