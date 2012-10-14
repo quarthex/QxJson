@@ -7,19 +7,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "qx.js.value.h"
-#include "qx.js.null.h"
-#include "qx.js.true.h"
-#include "qx.js.false.h"
-#include "qx.js.number.h"
+#include "qx.json.value.h"
+#include "qx.json.null.h"
+#include "qx.json.true.h"
+#include "qx.json.false.h"
+#include "qx.json.number.h"
 
 #define ASSERT(condition) do { if (!(condition)) return -1; } while(0)
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
 
-static int testJsNull(void);
-static int testJsTrue(void);
-static int testJsFalse(void);
-static int testJsNumber(void);
+static int testJsonNull(void);
+static int testJsonTrue(void);
+static int testJsonFalse(void);
+static int testJsonNumber(void);
 
 typedef struct UnitTest
 {
@@ -30,10 +30,10 @@ typedef struct UnitTest
 int main(void)
 {
 	UnitTest const tests[] = {
-		{ "javascript null value", testJsNull },
-		{ "javascript true value", testJsTrue },
-		{ "javascript false value", testJsFalse },
-		{ "javascript number value", testJsNumber }
+		{ "javascript null value", testJsonNull },
+		{ "javascript true value", testJsonTrue },
+		{ "javascript false value", testJsonFalse },
+		{ "javascript number value", testJsonNumber }
 	};
 	size_t failed = 0;
 	size_t index = 0;
@@ -74,55 +74,64 @@ int main(void)
 	return EXIT_FAILURE;
 }
 
-static int testJsNull(void)
+static int testJsonNull(void)
 {
-	QxJsValue *value = qxJsNullNew();
+	QxJsonValue *value = qxJsonNullNew();
 	ASSERT(value != NULL);
-	ASSERT(qxJsValueType(value) == QxJsValueTypeNull);
-	qxJsValueDecRef(value);
+	ASSERT(qxJsonValueType(value) == QxJsonValueTypeNull);
+	qxJsonValueDecRef(value);
 	return 0;
 }
 
-static int testJsTrue(void)
+static int testJsonTrue(void)
 {
-	QxJsValue *value = qxJsTrueNew();
+	QxJsonValue *value = qxJsonTrueNew();
 	ASSERT(value != NULL);
-	ASSERT(qxJsValueType(value) == QxJsValueTypeTrue);
-	qxJsValueDecRef(value);
+	ASSERT(qxJsonValueType(value) == QxJsonValueTypeTrue);
+	qxJsonValueDecRef(value);
 	return 0;
 }
 
-static int testJsFalse(void)
+static int testJsonFalse(void)
 {
-	QxJsValue *value = qxJsFalseNew();
+	QxJsonValue *value = qxJsonFalseNew();
 	ASSERT(value != NULL);
-	ASSERT(qxJsValueType(value) == QxJsValueTypeFalse);
-	qxJsValueDecRef(value);
+	ASSERT(qxJsonValueType(value) == QxJsonValueTypeFalse);
+	qxJsonValueDecRef(value);
 	return 0;
 }
 
-static int testJsNumber(void)
+static int compareNumbers(qx_json_number_t first, qx_json_number_t last)
 {
-	QxJsNumber *number;
-	QxJsValue *value;
+	return memcmp(&first, &last, sizeof(qx_json_number_t));
+}
+
+static int testJsonNumber(void)
+{
+	QxJsonNumber *number;
+	QxJsonValue *value;
 	size_t index = 0;
 
-	qx_js_number_t const numbers[] = {
+	qx_json_number_t const numbers[] = {
 		1234.5678,
-		-0.0,
+		-0.,
 		12345678,
 	};
 
 	for (; index != ARRAY_SIZE(numbers); ++index)
 	{
-		value = qxJsNumberNew(numbers[index]);
+		value = qxJsonNumberNew(numbers[index]);
 		ASSERT(value != NULL);
-		ASSERT(qxJsValueIsNumber(value));
-		number = QX_JS_NUMBER(value);
+		ASSERT(qxJsonValueIsNumber(value));
+		number = QX_JSON_NUMBER(value);
 		ASSERT(number != NULL);
-		ASSERT(qxJsNumberValue(number) == numbers[index]);
-		qxJsValueDecRef(value);
+		ASSERT(compareNumbers(qxJsonNumberValue(number), numbers[index]) == 0);
+		qxJsonValueDecRef(value);
 	}
+
+	value = qxJsonNumberNew(-0.);
+	ASSERT(compareNumbers(qxJsonNumberValue(QX_JSON_NUMBER(value)), 0.) != 0);
+	qxJsonValueDecRef(value);
 
 	return 0;
 }

@@ -1,23 +1,23 @@
 /**
- * @file qx.js.value.c
- * @brief Source file of the QxJsValue class
+ * @file qx.json.value.c
+ * @brief Source file of the QxJsonValue class
  * @author Romain DEOUX
  */
 
 #include <assert.h>
 #include <stdlib.h>
 
-#include "qx.js.value.h"
-#include "qx.js.value.private.h"
+#include "qx.json.value.h"
+#include "qx.json.value.private.h"
 
-void qxJsValueIncRef(QxJsValue *value)
+void qxJsonValueIncRef(QxJsonValue *value)
 {
 	assert(value != NULL);
 	++value->ref;
 	return;
 }
 
-void qxJsValueDecRef(QxJsValue *value)
+void qxJsonValueDecRef(QxJsonValue *value)
 {
 	assert(value != NULL);
 
@@ -35,7 +35,7 @@ void qxJsValueDecRef(QxJsValue *value)
 	return;
 }
 
-QxJsValueType qxJsValueType(QxJsValue const *value)
+QxJsonValueType qxJsonValueType(QxJsonValue const *value)
 {
 	assert(value != NULL);
 	assert(value->klass != NULL);

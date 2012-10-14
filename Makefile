@@ -4,11 +4,11 @@ LD = gcc
 LDFLAGS = -shared
 
 SOURCES = \
-	qx.js.value.c \
-	qx.js.null.c \
-	qx.js.true.c \
-	qx.js.false.c \
-	qx.js.number.c
+	qx.json.value.c \
+	qx.json.null.c \
+	qx.json.true.c \
+	qx.json.false.c \
+	qx.json.number.c
 OBJECTS = $(SOURCES:.c=.o)
 
 all: libqxjson.so
