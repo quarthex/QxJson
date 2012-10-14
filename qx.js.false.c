@@ -10,11 +10,9 @@
 #include "qx.js.value.private.h"
 #include "qx.js.false.h"
 
-#define unused(value) ((void)value)
-
 static void finalize(QxJsValue *value)
 {
-	unused(value);
+	QX_UNUSED(value);
 	return;
 }
 

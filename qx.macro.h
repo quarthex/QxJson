@@ -7,7 +7,7 @@
 #ifndef _H_QX_MACRO
 #define _H_QX_MACRO
 
-#define UNUSED(variable) ((void)(variable))
+#define QX_UNUSED(variable) ((void)(variable))
 
 #ifdef QX_JSON_BUILD
 #  define QX_API

@@ -7,7 +7,8 @@ SOURCES = \
 	qx.js.value.c \
 	qx.js.null.c \
 	qx.js.true.c \
-	qx.js.false.c
+	qx.js.false.c \
+	qx.js.number.c
 OBJECTS = $(SOURCES:.c=.o)
 
 all: libqxjson.so

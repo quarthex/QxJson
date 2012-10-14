@@ -11,12 +11,15 @@
 #include "qx.js.null.h"
 #include "qx.js.true.h"
 #include "qx.js.false.h"
+#include "qx.js.number.h"
 
 #define ASSERT(condition) do { if (!(condition)) return -1; } while(0)
+#define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
 
 static int testJsNull(void);
 static int testJsTrue(void);
 static int testJsFalse(void);
+static int testJsNumber(void);
 
 typedef struct UnitTest
 {
@@ -29,13 +32,13 @@ int main(void)
 	UnitTest const tests[] = {
 		{ "javascript null value", testJsNull },
 		{ "javascript true value", testJsTrue },
-		{ "javascript false value", testJsFalse }
+		{ "javascript false value", testJsFalse },
+		{ "javascript number value", testJsNumber }
 	};
 	size_t failed = 0;
 	size_t index = 0;
-	size_t const end = sizeof(tests) / sizeof(UnitTest);
 
-	for (; index != end; ++index)
+	for (; index != ARRAY_SIZE(tests); ++index)
 	{
 		printf("%-32s : ", tests[index].name);
 
@@ -86,6 +89,7 @@ static int testJsTrue(void)
 	ASSERT(value != NULL);
 	ASSERT(qxJsValueType(value) == QxJsValueTypeTrue);
 	qxJsValueDecRef(value);
+	return 0;
 }
 
 static int testJsFalse(void)
@@ -94,5 +98,32 @@ static int testJsFalse(void)
 	ASSERT(value != NULL);
 	ASSERT(qxJsValueType(value) == QxJsValueTypeFalse);
 	qxJsValueDecRef(value);
+	return 0;
+}
+
+static int testJsNumber(void)
+{
+	QxJsNumber *number;
+	QxJsValue *value;
+	size_t index = 0;
+
+	qx_js_number_t const numbers[] = {
+		1234.5678,
+		-0.0,
+		12345678,
+	};
+
+	for (; index != ARRAY_SIZE(numbers); ++index)
+	{
+		value = qxJsNumberNew(numbers[index]);
+		ASSERT(value != NULL);
+		ASSERT(qxJsValueIsNumber(value));
+		number = QX_JS_NUMBER(value);
+		ASSERT(number != NULL);
+		ASSERT(qxJsNumberValue(number) == numbers[index]);
+		qxJsValueDecRef(value);
+	}
+
+	return 0;
 }
 

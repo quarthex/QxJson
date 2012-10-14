@@ -21,8 +21,15 @@ typedef enum QxJsValueType
 {
 	QxJsValueTypeNull,
 	QxJsValueTypeTrue,
-	QxJsValueTypeFalse
+	QxJsValueTypeFalse,
+	QxJsValueTypeNumber
 } QxJsValueType;
+
+#define qxJsValueIs(value, Type) (qxJsValueType(value) == (QxJsValueType##Type))
+#define qxJsValueIsNull(value)   qxJsValueIs(value, Null)
+#define qxJsValueIsTrue(value)   qxJsValueIs(value, True)
+#define qxJsValueIsFalse(value)  qxJsValueIs(value, False)
+#define qxJsValueIsNumber(value) qxJsValueIs(value, Number)
 
 /**
  * @brief Increment the reference counter of a value.
