@@ -8,6 +8,8 @@ all: libqxjson.so
 clean:
 	rm -fv qx.js.value.o;
 	rm -fv qx.js.null.o;
+	rm -fv qx.js.true.o;
+	rm -fv qx.js.false.o;
 
 distclean: clean
 	rm -fv libqxjson.so;
@@ -22,6 +24,6 @@ test: test.c all
 %.o: %.c
 	$(CC) $(CFLAGS) -o $@ -c $<;
 
-libqxjson.so: qx.js.value.o qx.js.null.o
+libqxjson.so: qx.js.value.o qx.js.null.o qx.js.true.o qx.js.false.o
 	$(LD) $(LDFLAGS) -o $@ $^;
 

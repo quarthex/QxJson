@@ -19,7 +19,9 @@ typedef struct QxJsValue QxJsValue;
  */
 typedef enum QxJsValueType
 {
-	QxJsValueTypeNull
+	QxJsValueTypeNull,
+	QxJsValueTypeTrue,
+	QxJsValueTypeFalse
 } QxJsValueType;
 
 /**

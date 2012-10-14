@@ -9,10 +9,14 @@
 
 #include "qx.js.value.h"
 #include "qx.js.null.h"
+#include "qx.js.true.h"
+#include "qx.js.false.h"
 
 #define ASSERT(condition) do { if (!(condition)) return -1; } while(0)
 
 static int testJsNull(void);
+static int testJsTrue(void);
+static int testJsFalse(void);
 
 typedef struct UnitTest
 {
@@ -23,7 +27,9 @@ typedef struct UnitTest
 int main(void)
 {
 	UnitTest const tests[] = {
-		"javascript null value", testJsNull
+		{ "javascript null value", testJsNull },
+		{ "javascript true value", testJsTrue },
+		{ "javascript false value", testJsFalse }
 	};
 	size_t failed = 0;
 	size_t index = 0;
@@ -73,3 +79,20 @@ static int testJsNull(void)
 	qxJsValueDecRef(value);
 	return 0;
 }
+
+static int testJsTrue(void)
+{
+	QxJsValue *value = qxJsTrueNew();
+	ASSERT(value != NULL);
+	ASSERT(qxJsValueType(value) == QxJsValueTypeTrue);
+	qxJsValueDecRef(value);
+}
+
+static int testJsFalse(void)
+{
+	QxJsValue *value = qxJsFalseNew();
+	ASSERT(value != NULL);
+	ASSERT(qxJsValueType(value) == QxJsValueTypeFalse);
+	qxJsValueDecRef(value);
+}
+
