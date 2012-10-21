@@ -8,7 +8,8 @@ SOURCES = \
 	qx.json.null.c \
 	qx.json.true.c \
 	qx.json.false.c \
-	qx.json.number.c
+	qx.json.number.c \
+	qx.json.string.c
 OBJECTS = $(SOURCES:.c=.o)
 
 all: libqxjson.so

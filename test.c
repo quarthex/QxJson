@@ -12,6 +12,7 @@
 #include "qx.json.true.h"
 #include "qx.json.false.h"
 #include "qx.json.number.h"
+#include "qx.json.string.h"
 
 #define ASSERT(condition) do { if (!(condition)) return -1; } while(0)
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
@@ -20,6 +21,7 @@ static int testJsonNull(void);
 static int testJsonTrue(void);
 static int testJsonFalse(void);
 static int testJsonNumber(void);
+static int testJsonString(void);
 
 typedef struct UnitTest
 {
@@ -33,7 +35,8 @@ int main(void)
 		{ "javascript null value", testJsonNull },
 		{ "javascript true value", testJsonTrue },
 		{ "javascript false value", testJsonFalse },
-		{ "javascript number value", testJsonNumber }
+		{ "javascript number value", testJsonNumber },
+		{ "javascript string value", testJsonString }
 	};
 	size_t failed = 0;
 	size_t index = 0;
@@ -131,6 +134,25 @@ static int testJsonNumber(void)
 
 	value = qxJsonNumberNew(-0.);
 	ASSERT(compareNumbers(qxJsonNumberValue(QX_JSON_NUMBER(value)), 0.) != 0);
+	qxJsonValueDecRef(value);
+
+	return 0;
+}
+
+static int testJsonString(void)
+{
+	QxJsonString *string;
+	QxJsonValue *value;
+
+	value = qxJsonStringNew(NULL, 5);
+	ASSERT(value == NULL);
+
+	value = qxJsonStringNew(L"Hello", 5);
+	ASSERT(qxJsonValueIsString(value));
+	string = QX_JSON_STRING(value);
+	ASSERT(string != NULL);
+	ASSERT(qxJsonStringSize(string) == 5);
+	ASSERT(memcmp(qxJsonStringData(string), L"Hello", 5 * sizeof(wchar_t)) == 0);
 	qxJsonValueDecRef(value);
 
 	return 0;

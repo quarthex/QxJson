@@ -22,7 +22,8 @@ typedef enum QxJsonValueType
 	QxJsonValueTypeNull,
 	QxJsonValueTypeTrue,
 	QxJsonValueTypeFalse,
-	QxJsonValueTypeNumber
+	QxJsonValueTypeNumber,
+	QxJsonValueTypeString
 } QxJsonValueType;
 
 #define qxJsonValueIs(value, Type) \
@@ -31,6 +32,7 @@ typedef enum QxJsonValueType
 #define qxJsonValueIsTrue(value)   qxJsonValueIs(value, True)
 #define qxJsonValueIsFalse(value)  qxJsonValueIs(value, False)
 #define qxJsonValueIsNumber(value) qxJsonValueIs(value, Number)
+#define qxJsonValueIsString(value) qxJsonValueIs(value, String)
 
 /**
  * @brief Increment the reference counter of a value.
