@@ -32,5 +32,25 @@ QX_API QxJsonValue *qxJsonArrayNew(void);
  */
 size_t qxJsonArraySize(QxJsonArray const *array);
 
+/**
+ * @brief Append a value to the array.
+ * @param[out] array The array.
+ * @param[in] value The value to be appended.
+ * @return 0 on success.
+ *
+ * The reference counter of the value is incremented.
+ */
+int qxJsonArrayAppend(QxJsonArray *array, QxJsonValue *value);
+
+/**
+ * @brief Append a value to the array.
+ * @param[out] array The array.
+ * @param[in] value The value to be appended.
+ * @return 0 on success.
+ *
+ * The reference counter of the value is not incremented.
+ */
+int qxJsonArrayAppendNew(QxJsonArray *array, QxJsonValue *value);
+
 #endif /* _H_QX_JSON_ARRAY */
 

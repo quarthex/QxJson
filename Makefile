@@ -26,7 +26,7 @@ test: test.c all
 	$(CC) test.c -o test -L. -lqxjson;
 	@echo Running test...
 	@echo
-	@LD_LIBRARY_PATH=. ./test;
+	@LD_LIBRARY_PATH=. valgrind --leak-check=full -q ./test;
 
 %.o: %.c
 	$(CC) $(CFLAGS) -o $@ -c $<;

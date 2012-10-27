@@ -15,20 +15,20 @@
 #include "qx.json.string.h"
 #include "qx.json.array.h"
 
-#define ASSERT(condition) do { if (!(condition)) return -1; } while(0)
+#define ASSERT(condition) do { if (!(condition)) { return #condition; } } while(0)
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
 
-static int testJsonNull(void);
-static int testJsonTrue(void);
-static int testJsonFalse(void);
-static int testJsonNumber(void);
-static int testJsonString(void);
-static int testJsonArray(void);
+static char const *testJsonNull(void);
+static char const *testJsonTrue(void);
+static char const *testJsonFalse(void);
+static char const *testJsonNumber(void);
+static char const *testJsonString(void);
+static char const *testJsonArray(void);
 
 typedef struct UnitTest
 {
 	char const *name;
-	int (*function)(void);
+	char const *(*function)(void);
 } UnitTest;
 
 int main(void)
@@ -43,22 +43,22 @@ int main(void)
 	};
 	size_t failed = 0;
 	size_t index = 0;
+	char const *assertion;
 
 	for (; index != ARRAY_SIZE(tests); ++index)
 	{
 		printf("%-32s : ", tests[index].name);
+		assertion = tests[index].function();
 
-		if (tests[index].function() != 0)
+		if (assertion != NULL)
 		{
 			++failed;
-			printf("failed");
+			printf("failed\n  > %s\n", assertion);
 		}
 		else
 		{
-			printf("succeded");
+			printf("succeded\n");
 		}
-
-		putchar('\n');
 	}
 
 	switch (failed)
@@ -80,16 +80,16 @@ int main(void)
 	return EXIT_FAILURE;
 }
 
-static int testJsonNull(void)
+static char const *testJsonNull(void)
 {
 	QxJsonValue *value = qxJsonNullNew();
 	ASSERT(value != NULL);
 	ASSERT(QX_JSON_IS_NULL(value));
 	qxJsonValueDecRef(value);
-	return 0;
+	return NULL;
 }
 
-static int testJsonTrue(void)
+static char const *testJsonTrue(void)
 {
 	QxJsonValue *value = qxJsonTrueNew();
 	ASSERT(value != NULL);
@@ -98,7 +98,7 @@ static int testJsonTrue(void)
 	return 0;
 }
 
-static int testJsonFalse(void)
+static char const *testJsonFalse(void)
 {
 	QxJsonValue *value = qxJsonFalseNew();
 	ASSERT(value != NULL);
@@ -112,7 +112,7 @@ static int compareNumbers(qx_json_number_t first, qx_json_number_t last)
 	return memcmp(&first, &last, sizeof(qx_json_number_t));
 }
 
-static int testJsonNumber(void)
+static char const *testJsonNumber(void)
 {
 	QxJsonNumber *number;
 	QxJsonValue *value;
@@ -142,7 +142,7 @@ static int testJsonNumber(void)
 	return 0;
 }
 
-static int testJsonString(void)
+static char const *testJsonString(void)
 {
 	QxJsonString *string;
 	QxJsonValue *value;
@@ -161,7 +161,7 @@ static int testJsonString(void)
 	return 0;
 }
 
-static int testJsonArray(void)
+static char const *testJsonArray(void)
 {
 	QxJsonArray *array;
 	QxJsonValue *value;
@@ -172,6 +172,11 @@ static int testJsonArray(void)
 	array = QX_JSON_ARRAY(value);
 	ASSERT(array != NULL);
 	ASSERT(qxJsonArraySize(array) == 0);
+	ASSERT(qxJsonArrayAppend(NULL, value) != 0);
+	ASSERT(qxJsonArrayAppend(array, NULL) != 0);
+	ASSERT(qxJsonArraySize(array) == 0);
+	ASSERT(qxJsonArrayAppendNew(array, qxJsonNullNew()) == 0);
+	ASSERT(qxJsonArraySize(array) == 1);
 
 	qxJsonValueDecRef(value);
 	return 0;
