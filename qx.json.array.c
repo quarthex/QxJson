@@ -101,7 +101,7 @@ int qxJsonArrayAppend(QxJsonArray *array, QxJsonValue *value)
 
 int qxJsonArrayAppendNew(QxJsonArray *array, QxJsonValue *value)
 {
-	if (array && value && (array != value))
+	if (array && value && (&array->parent != value))
 	{
 		if (array->tail)
 		{
@@ -150,7 +150,7 @@ int qxJsonArrayPrepend(QxJsonArray *array, QxJsonValue *value)
 
 int qxJsonArrayPrependNew(QxJsonArray *array, QxJsonValue *value)
 {
-	if (array && value && (array != value))
+	if (array && value && (&array->parent != value))
 	{
 		if (array->head)
 		{
