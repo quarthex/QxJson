@@ -23,16 +23,9 @@ typedef enum QxJsonValueType
 	QxJsonValueTypeTrue,
 	QxJsonValueTypeFalse,
 	QxJsonValueTypeNumber,
-	QxJsonValueTypeString
+	QxJsonValueTypeString,
+	QxJsonValueTypeArray
 } QxJsonValueType;
-
-#define qxJsonValueIs(value, Type) \
-	(qxJsonValueType(value) == (QxJsonValueType##Type))
-#define qxJsonValueIsNull(value)   qxJsonValueIs(value, Null)
-#define qxJsonValueIsTrue(value)   qxJsonValueIs(value, True)
-#define qxJsonValueIsFalse(value)  qxJsonValueIs(value, False)
-#define qxJsonValueIsNumber(value) qxJsonValueIs(value, Number)
-#define qxJsonValueIsString(value) qxJsonValueIs(value, String)
 
 /**
  * @brief Increment the reference counter of a value.
@@ -54,6 +47,24 @@ QX_API void qxJsonValueDecRef(QxJsonValue *value);
  * @return The unique identifier of the type of the value.
  */
 QX_API QxJsonValueType qxJsonValueType(QxJsonValue const *value);
+
+/**
+ * @brief Test that a JSON value has the requiered type.
+ * @param value The value to be tested.
+ * @param type The requiered type.
+ * @return 0 if the type has not the requiered type.
+ */
+#define QX_JSON_IS(value, type) \
+	(qxJsonValueType(value) == QxJsonValueType##type)
+
+/**
+ * @brief Dynamically cast a value into the given type.
+ * @param value The value to be casted.
+ * @param type The required type.
+ * @return The casted value on success or a null pointer otherwise.
+ */
+#define QX_JSON_CAST(value, type) \
+	((QxJson##type *)(QX_JSON_IS((value), type) ? (value) : 0))
 
 #endif /* _H_QX_JSON_VALUE */
 

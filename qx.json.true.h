@@ -10,6 +10,8 @@
 #include "qx.macro.h"
 #include "qx.json.value.h"
 
+#define QX_JSON_IS_TRUE(value) QX_JSON_IS((value), True)
+
 /**
  * @brief Class that handle a JavaScript true value.
  */

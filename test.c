@@ -13,6 +13,7 @@
 #include "qx.json.false.h"
 #include "qx.json.number.h"
 #include "qx.json.string.h"
+#include "qx.json.array.h"
 
 #define ASSERT(condition) do { if (!(condition)) return -1; } while(0)
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
@@ -22,6 +23,7 @@ static int testJsonTrue(void);
 static int testJsonFalse(void);
 static int testJsonNumber(void);
 static int testJsonString(void);
+static int testJsonArray(void);
 
 typedef struct UnitTest
 {
@@ -36,7 +38,8 @@ int main(void)
 		{ "javascript true value", testJsonTrue },
 		{ "javascript false value", testJsonFalse },
 		{ "javascript number value", testJsonNumber },
-		{ "javascript string value", testJsonString }
+		{ "javascript string value", testJsonString },
+		{ "javascript array value", testJsonArray }
 	};
 	size_t failed = 0;
 	size_t index = 0;
@@ -81,7 +84,7 @@ static int testJsonNull(void)
 {
 	QxJsonValue *value = qxJsonNullNew();
 	ASSERT(value != NULL);
-	ASSERT(qxJsonValueType(value) == QxJsonValueTypeNull);
+	ASSERT(QX_JSON_IS_NULL(value));
 	qxJsonValueDecRef(value);
 	return 0;
 }
@@ -90,7 +93,7 @@ static int testJsonTrue(void)
 {
 	QxJsonValue *value = qxJsonTrueNew();
 	ASSERT(value != NULL);
-	ASSERT(qxJsonValueType(value) == QxJsonValueTypeTrue);
+	ASSERT(QX_JSON_IS_TRUE(value));
 	qxJsonValueDecRef(value);
 	return 0;
 }
@@ -99,7 +102,7 @@ static int testJsonFalse(void)
 {
 	QxJsonValue *value = qxJsonFalseNew();
 	ASSERT(value != NULL);
-	ASSERT(qxJsonValueType(value) == QxJsonValueTypeFalse);
+	ASSERT(QX_JSON_IS_FALSE(value));
 	qxJsonValueDecRef(value);
 	return 0;
 }
@@ -125,7 +128,7 @@ static int testJsonNumber(void)
 	{
 		value = qxJsonNumberNew(numbers[index]);
 		ASSERT(value != NULL);
-		ASSERT(qxJsonValueIsNumber(value));
+		ASSERT(QX_JSON_IS_NUMBER(value));
 		number = QX_JSON_NUMBER(value);
 		ASSERT(number != NULL);
 		ASSERT(compareNumbers(qxJsonNumberValue(number), numbers[index]) == 0);
@@ -148,7 +151,7 @@ static int testJsonString(void)
 	ASSERT(value == NULL);
 
 	value = qxJsonStringNew(L"Hello", 5);
-	ASSERT(qxJsonValueIsString(value));
+	ASSERT(QX_JSON_IS_STRING(value));
 	string = QX_JSON_STRING(value);
 	ASSERT(string != NULL);
 	ASSERT(qxJsonStringSize(string) == 5);
@@ -158,3 +161,14 @@ static int testJsonString(void)
 	return 0;
 }
 
+static int testJsonArray(void)
+{
+	QxJsonValue *value;
+
+	value = qxJsonArrayNew();
+	ASSERT(value != NULL);
+	ASSERT(QX_JSON_IS_ARRAY(value));
+	qxJsonValueDecRef(value);
+
+	return 0;
+}

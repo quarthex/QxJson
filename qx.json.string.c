@@ -33,7 +33,7 @@ struct QxJsonString
 static void finalize(QxJsonValue *value)
 {
 	assert(value != NULL);
-	assert(qxJsonValueIsString(value));
+	assert(QX_JSON_IS_STRING(value));
 	free(((QxJsonString *)(value))->data);
 	return;
 }

@@ -10,6 +10,8 @@
 #include "qx.macro.h"
 #include "qx.json.value.h"
 
+#define QX_JSON_IS_FALSE(value) QX_JSON_IS((value), False)
+
 /**
  * @brief Class that handle a JavaScript false value.
  */

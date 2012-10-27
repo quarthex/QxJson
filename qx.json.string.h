@@ -10,7 +10,8 @@
 #include "qx.macro.h"
 #include "qx.json.value.h"
 
-#define QX_JSON_STRING(value) (qxJsonValueIsString(value) ? (QxJsonString *)(value) : NULL)
+#define QX_JSON_IS_STRING(value) QX_JSON_IS((value), String)
+#define QX_JSON_STRING(value) QX_JSON_CAST((value), String)
 
 /**
  * @brief Class that handle a JavaScript string value.

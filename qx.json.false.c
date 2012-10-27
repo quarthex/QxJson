@@ -1,6 +1,6 @@
 /**
  * @file qx.json.false.c
- * @brief Source file of the QxJsonNull class.
+ * @brief Source file of the QxJsonFalse class.
  * @author Romain DEOUX
  */
 

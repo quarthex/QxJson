@@ -10,7 +10,8 @@
 #include "qx.macro.h"
 #include "qx.json.value.h"
 
-#define QX_JSON_NUMBER(value) (qxJsonValueIsNumber(value) ? (QxJsonNumber *)(value) : NULL )
+#define QX_JSON_IS_NUMBER(value) QX_JSON_IS((value), Number)
+#define QX_JSON_NUMBER(value) QX_JSON_CAST((value), Number)
 
 /**
  * @brief Class that handle a JavaScript number value.

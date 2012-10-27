@@ -10,6 +10,8 @@
 #include "qx.macro.h"
 #include "qx.json.value.h"
 
+#define QX_JSON_IS_NULL(value) QX_JSON_IS((value), Null)
+
 /**
  * @brief Class that handle a JavaScript null value.
  */
