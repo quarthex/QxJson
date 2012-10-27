@@ -46,3 +46,8 @@ QxJsonValue *qxJsonArrayNew(void)
 	return NULL;
 }
 
+size_t qxJsonArraySize(QxJsonArray const *array)
+{
+	return 0;
+}
+

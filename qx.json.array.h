@@ -24,5 +24,13 @@ typedef struct QxJsonArray QxJsonArray;
  */
 QX_API QxJsonValue *qxJsonArrayNew(void);
 
+/**
+ * @brief Get the array size.
+ * @param[in] The array.
+ * @return The size of the array.
+ * @warning If @c array is a null pointer, 0 is returned.
+ */
+size_t qxJsonArraySize(QxJsonArray const *array);
+
 #endif /* _H_QX_JSON_ARRAY */
 

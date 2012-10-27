@@ -163,12 +163,16 @@ static int testJsonString(void)
 
 static int testJsonArray(void)
 {
+	QxJsonArray *array;
 	QxJsonValue *value;
 
 	value = qxJsonArrayNew();
 	ASSERT(value != NULL);
 	ASSERT(QX_JSON_IS_ARRAY(value));
-	qxJsonValueDecRef(value);
+	array = QX_JSON_ARRAY(value);
+	ASSERT(array != NULL);
+	ASSERT(qxJsonArraySize(array) == 0);
 
+	qxJsonValueDecRef(value);
 	return 0;
 }
