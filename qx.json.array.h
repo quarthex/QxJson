@@ -52,5 +52,25 @@ int qxJsonArrayAppend(QxJsonArray *array, QxJsonValue *value);
  */
 int qxJsonArrayAppendNew(QxJsonArray *array, QxJsonValue *value);
 
+/**
+ * @brief Prepend a value to the array.
+ * @param[out] array The array.
+ * @param[in] value The value to be prepended.
+ * @return 0 on success.
+ *
+ * The reference counter of the value is incremented.
+ */
+int qxJsonArrayPrepend(QxJsonArray *array, QxJsonValue *value);
+
+/**
+ * @brief Prepend a value to the array.
+ * @param[out] array The array.
+ * @param[in] value The value to be prepended.
+ * @return 0 on success.
+ *
+ * The reference counter of the value is not incremented.
+ */
+int qxJsonArrayPrependNew(QxJsonArray *array, QxJsonValue *value);
+
 #endif /* _H_QX_JSON_ARRAY */
 

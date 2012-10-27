@@ -137,3 +137,52 @@ int qxJsonArrayAppendNew(QxJsonArray *array, QxJsonValue *value)
 	return -1;
 }
 
+int qxJsonArrayPrepend(QxJsonArray *array, QxJsonValue *value)
+{
+	if (qxJsonArrayPrependNew(array, value))
+	{
+		return -1;
+	}
+
+	++value->ref;
+	return 0;
+}
+
+int qxJsonArrayPrependNew(QxJsonArray *array, QxJsonValue *value)
+{
+	if (array && value)
+	{
+		if (array->head)
+		{
+			assert(array->tail != NULL);
+			array->head->previous = ALLOC(Node);
+
+			if (array->head->previous != NULL)
+			{
+				array->head->previous->next = array->head;
+				array->head = array->head->previous;
+			}
+		}
+		else
+		{
+			assert(array->tail == NULL);
+			array->head = ALLOC(Node);
+
+			if (array->head)
+			{
+				array->tail = array->head;
+				array->tail->next = NULL;
+			}
+		}
+
+		if (array->head)
+		{
+			array->head->previous = NULL;
+			array->head->value = value;
+			return 0;
+		}
+	}
+
+	return -1;
+}
+
