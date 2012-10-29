@@ -179,6 +179,9 @@ static char const *testJsonArray(void)
 	ASSERT(qxJsonArraySize(array) == 1);
 	ASSERT(qxJsonArrayPrependNew(array, qxJsonTrueNew()) == 0);
 	ASSERT(qxJsonArraySize(array) == 2);
+	ASSERT(QX_JSON_IS_TRUE(qxJsonArrayGet(array, 0)));
+	ASSERT(QX_JSON_IS_NULL(qxJsonArrayGet(array, 1)));
+	ASSERT(qxJsonArrayGet(array, 2) == NULL);
 
 	qxJsonValueDecRef(value);
 	return 0;

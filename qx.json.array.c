@@ -186,3 +186,24 @@ int qxJsonArrayPrependNew(QxJsonArray *array, QxJsonValue *value)
 	return -1;
 }
 
+QxJsonValue const *qxJsonArrayGet(QxJsonArray const *array, size_t index)
+{
+	if (array && array->head)
+	{
+		Node const *node = array->head;
+
+		while (index > 0 && node->next)
+		{
+			--index;
+			node = node->next;
+		}
+
+		if (!index)
+		{
+			return node->value;
+		}
+	}
+
+	return NULL;
+}
+

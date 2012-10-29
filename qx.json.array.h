@@ -72,5 +72,13 @@ int qxJsonArrayPrepend(QxJsonArray *array, QxJsonValue *value);
  */
 int qxJsonArrayPrependNew(QxJsonArray *array, QxJsonValue *value);
 
+/**
+ * @brief Get a value in the array.
+ * @param[in] array The array.
+ * @param[in] index The index of the value in the array.
+ * @return The value on success. A null pointer otherwise.
+ */
+QxJsonValue const *qxJsonArrayGet(QxJsonArray const *array, size_t index);
+
 #endif /* _H_QX_JSON_ARRAY */
 
