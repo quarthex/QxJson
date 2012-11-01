@@ -1,3 +1,10 @@
-libqxjson.so
-qx.*.o
-test
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+cmake_install.cmake
+Makefile
+/Testing
+
+# build
+/libQxJson.so
+/test/qx.test
