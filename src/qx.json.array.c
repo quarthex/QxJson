@@ -157,7 +157,17 @@ int qxJsonArrayAppendNew(QxJsonArray *array, QxJsonValue *value)
 
 int qxJsonArrayPrepend(QxJsonArray *array, QxJsonValue *value)
 {
-	if (qxJsonArrayPrependNew(array, value))
+	return qxJsonArrayInsert(array, 0, value);
+}
+
+int qxJsonArrayPrependNew(QxJsonArray *array, QxJsonValue *value)
+{
+	return qxJsonArrayInsertNew(array, 0, value);
+}
+
+int qxJsonArrayInsert(QxJsonArray *array, size_t index,  QxJsonValue *value)
+{
+	if (qxJsonArrayInsertNew(array, index, value))
 	{
 		return -1;
 	}
@@ -166,23 +176,38 @@ int qxJsonArrayPrepend(QxJsonArray *array, QxJsonValue *value)
 	return 0;
 }
 
-int qxJsonArrayPrependNew(QxJsonArray *array, QxJsonValue *value)
+int qxJsonArrayInsertNew(QxJsonArray *array, size_t index, QxJsonValue *value)
 {
+	Node *node;
+
 	if (array && value && (&array->parent != value))
 	{
 		if (array->node)
 		{
 			while (array->node->previous)
 			{
-				array->node->previous = NULL;
+				array->node = array->node->previous;
 			}
 
-			array->node->previous = ALLOC(Node);
-
-			if (array->node->previous != NULL)
+			for (; index > 0 && array->node->next; --index)
 			{
-				array->node->previous->next = array->node;
-				array->node = array->node->previous;
+				array->node = array->node->next;
+			}
+
+			node = ALLOC(Node);
+
+			if (node)
+			{
+				node->previous = array->node->previous;
+				node->next = array->node;
+
+				if (node->previous)
+				{
+					node->previous->next = node;
+				}
+
+				node->next->previous = node;
+				array->node = node;
 			}
 		}
 		else
@@ -191,13 +216,13 @@ int qxJsonArrayPrependNew(QxJsonArray *array, QxJsonValue *value)
 
 			if (array->node)
 			{
+				array->node->previous = NULL;
 				array->node->next = NULL;
 			}
 		}
 
 		if (array->node)
 		{
-			array->node->previous = NULL;
 			array->node->value = value;
 			return 0;
 		}

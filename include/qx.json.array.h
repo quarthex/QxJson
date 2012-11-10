@@ -73,6 +73,28 @@ int qxJsonArrayPrepend(QxJsonArray *array, QxJsonValue *value);
 int qxJsonArrayPrependNew(QxJsonArray *array, QxJsonValue *value);
 
 /**
+ * @brief Insert a value into the array.
+ * @param[out] array The array.
+ * @param[in] index The index where the value must be inserted.
+ * @param[in] value The value to insert.
+ * @return 0 on success.
+ *
+ * The reference counter of the value is incremented.
+ */
+int qxJsonArrayInsert(QxJsonArray *array, size_t index, QxJsonValue *value);
+
+/**
+ * @brief Insert a value into the array.
+ * @param[out] array The array.
+ * @param[in] index The index where the value must be inserted.
+ * @param[in] value The value to insert.
+ * @return 0 on success.
+ *
+ * The reference counter of the value is not incremented.
+ */
+int qxJsonArrayInsertNew(QxJsonArray *array, size_t index, QxJsonValue *value);
+
+/**
  * @brief Get a value in the array.
  * @param[in] array The array.
  * @param[in] index The index of the value in the array.
