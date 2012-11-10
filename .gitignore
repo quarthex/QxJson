@@ -1,10 +1,19 @@
+# CMake generated files
 CMakeCache.txt
 CMakeFiles/
-CTestTestfile.cmake
-cmake_install.cmake
 Makefile
+CTestTestfile.cmake
 /Testing
+cmake_install.cmake
 
 # build
 /libQxJson.so
-/test/qx.test
+
+# tests
+/test/qx.array
+/test/qx.false
+/test/qx.null
+/test/qx.number
+/test/qx.string
+/test/qx.true
+
