@@ -7,10 +7,8 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "qx.macro.h"
-#include "qx.json.value.h"
+#include "../include/qx.json.array.h"
 #include "qx.json.value.private.h"
-#include "qx.json.array.h"
 
 #define ALLOC(type) ((type *)malloc(sizeof(type)))
 

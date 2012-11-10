@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "qx.json.value.h"
+#include "../include/qx.json.value.h"
 #include "qx.json.value.private.h"
 
 void qxJsonValueIncRef(QxJsonValue *value)

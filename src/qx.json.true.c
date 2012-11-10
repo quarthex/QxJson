@@ -1,14 +1,13 @@
 /**
- * @file qx.json.false.c
- * @brief Source file of the QxJsonFalse class.
+ * @file qx.json.true.c
+ * @brief Source file of the QxJsonTrue class.
  * @author Romain DEOUX
  */
 
 #include <stdlib.h>
 
-#include "qx.json.value.h"
+#include "../include/qx.json.true.h"
 #include "qx.json.value.private.h"
-#include "qx.json.false.h"
 
 #define ALLOC(type) ((type *)malloc(sizeof(type)))
 
@@ -21,10 +20,10 @@ static void finalize(QxJsonValue *value)
 static QxJsonValueClass const klass =
 {
 	finalize,
-	QxJsonValueTypeFalse
+	QxJsonValueTypeTrue
 };
 
-QxJsonValue *qxJsonFalseNew(void)
+QxJsonValue *qxJsonTrueNew(void)
 {
 	QxJsonValue *const instance = ALLOC(QxJsonValue);
 

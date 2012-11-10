@@ -6,9 +6,8 @@
 
 #include <stdlib.h>
 
-#include "qx.json.value.h" 
+#include "../include/qx.json.number.h"
 #include "qx.json.value.private.h" 
-#include "qx.json.number.h"
 
 #define ALLOC(type) ((type *)malloc(sizeof(type)))
 

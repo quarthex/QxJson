@@ -9,7 +9,7 @@
 
 #include <stddef.h>
 
-#include "qx.json.value.h"
+#include "../include/qx.json.value.h"
 
 /**
  * @brief Internal introspection class for the values.

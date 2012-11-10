@@ -8,10 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "qx.macro.h"
-#include "qx.json.value.h"
+#include "../include/qx.json.string.h"
 #include "qx.json.value.private.h"
-#include "qx.json.string.h"
 
 #define ALLOC(type) ((type *)malloc(sizeof(type)))
 
