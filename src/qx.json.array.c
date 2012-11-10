@@ -24,23 +24,37 @@ struct Node
 struct QxJsonArray
 {
 	QxJsonValue parent;
-	Node *head;
-	Node *tail;
+	Node *node;
 };
 
 static void finalize(QxJsonValue *value)
 {
 	QxJsonArray *array = (QxJsonArray *)value;
 	Node *node;
+
 	assert(value != NULL);
 	assert(QX_JSON_IS_ARRAY(value));
 
-	while (array->head)
+	if (array->node)
 	{
-		qxJsonValueUnref(array->head->value);
-		node = array->head;
-		array->head = node->next;
-		free(node);
+		while (array->node->previous)
+		{
+			node = array->node->previous;
+			array->node->previous = node->previous;
+			qxJsonValueUnref(node->value);
+			free(node);
+		}
+
+		while (array->node->next)
+		{
+			node = array->node->next;
+			array->node->next = node->next;
+			qxJsonValueUnref(node->value);
+			free(node);
+		}
+
+		qxJsonValueUnref(array->node->value);
+		free(array->node);
 	}
 
 	return;
@@ -60,8 +74,7 @@ QxJsonValue *qxJsonArrayNew(void)
 	{
 		instance->parent.klass = &klass;
 		instance->parent.ref = 0;
-		instance->head = NULL;
-		instance->tail = NULL;
+		instance->node = NULL;
 		return &instance->parent;
 	}
 
@@ -73,14 +86,19 @@ size_t qxJsonArraySize(QxJsonArray const *array)
 	size_t size = 0;
 	Node *node;
 
-	if (array)
+	if (array && array->node)
 	{
-		node = array->head;
-
-		for (; node; node = node->next)
+		for (node = array->node; node->previous; node = node->previous)
 		{
 			++size;
 		}
+
+		for (node = array->node; node->next; node = node->next)
+		{
+			++size;
+		}
+
+		++size;
 	}
 
 	return size;
@@ -101,33 +119,35 @@ int qxJsonArrayAppendNew(QxJsonArray *array, QxJsonValue *value)
 {
 	if (array && value && (&array->parent != value))
 	{
-		if (array->tail)
+		if (array->node)
 		{
-			assert(array->head != NULL);
-			array->tail->next = ALLOC(Node);
-
-			if (array->tail->next != NULL)
+			while (array->node->next)
 			{
-				array->tail->next->previous = array->tail;
-				array->tail = array->tail->next;
+				array->node = array->node->next;
+			}
+
+			array->node->next = ALLOC(Node);
+
+			if (array->node->next)
+			{
+				array->node->next->previous = array->node;
+				array->node = array->node->next;
 			}
 		}
 		else
 		{
-			assert(array->head == NULL);
-			array->tail = ALLOC(Node);
+			array->node = ALLOC(Node);
 
-			if (array->tail)
+			if (array->node)
 			{
-				array->head = array->tail;
-				array->head->previous = NULL;
+				array->node->previous = NULL;
 			}
 		}
 
-		if (array->tail)
+		if (array->node)
 		{
-			array->tail->next = NULL;
-			array->tail->value = value;
+			array->node->next = NULL;
+			array->node->value = value;
 			return 0;
 		}
 	}
@@ -150,33 +170,35 @@ int qxJsonArrayPrependNew(QxJsonArray *array, QxJsonValue *value)
 {
 	if (array && value && (&array->parent != value))
 	{
-		if (array->head)
+		if (array->node)
 		{
-			assert(array->tail != NULL);
-			array->head->previous = ALLOC(Node);
-
-			if (array->head->previous != NULL)
+			while (array->node->previous)
 			{
-				array->head->previous->next = array->head;
-				array->head = array->head->previous;
+				array->node->previous = NULL;
+			}
+
+			array->node->previous = ALLOC(Node);
+
+			if (array->node->previous != NULL)
+			{
+				array->node->previous->next = array->node;
+				array->node = array->node->previous;
 			}
 		}
 		else
 		{
-			assert(array->tail == NULL);
-			array->head = ALLOC(Node);
+			array->node = ALLOC(Node);
 
-			if (array->head)
+			if (array->node)
 			{
-				array->tail = array->head;
-				array->tail->next = NULL;
+				array->node->next = NULL;
 			}
 		}
 
-		if (array->head)
+		if (array->node)
 		{
-			array->head->previous = NULL;
-			array->head->value = value;
+			array->node->previous = NULL;
+			array->node->value = value;
 			return 0;
 		}
 	}
@@ -184,21 +206,24 @@ int qxJsonArrayPrependNew(QxJsonArray *array, QxJsonValue *value)
 	return -1;
 }
 
-QxJsonValue const *qxJsonArrayGet(QxJsonArray const *array, size_t index)
+QxJsonValue const *qxJsonArrayGet(QxJsonArray *array, size_t index)
 {
-	if (array && array->head)
+	if (array && array->node)
 	{
-		Node const *node = array->head;
+		while (array->node->previous)
+		{
+			array->node = array->node->previous;
+		}
 
-		while (index > 0 && node->next)
+		while (index > 0 && array->node->next)
 		{
 			--index;
-			node = node->next;
+			array->node = array->node->next;
 		}
 
 		if (!index)
 		{
-			return node->value;
+			return array->node->value;
 		}
 	}
 
