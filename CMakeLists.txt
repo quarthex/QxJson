@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
+
 project(QxJson)
-enable_testing()
 
 add_library(QxJson SHARED
 	qx.json.value.c
@@ -13,4 +13,6 @@ add_library(QxJson SHARED
 set_target_properties(QxJson
 	PROPERTIES COMPILE_DEFINITIONS QX_JSON_BUILD)
 
+enable_testing()
 add_subdirectory(test)
+
