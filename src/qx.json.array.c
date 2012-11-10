@@ -198,15 +198,27 @@ int qxJsonArrayInsertNew(QxJsonArray *array, size_t index, QxJsonValue *value)
 
 			if (node)
 			{
-				node->previous = array->node->previous;
-				node->next = array->node;
+				if (index)
+				{
+					node->previous = array->node;
+					node->next = NULL;
+				}
+				else
+				{
+					node->previous = array->node->previous;
+					node->next = array->node;
+				}
 
 				if (node->previous)
 				{
 					node->previous->next = node;
 				}
 
-				node->next->previous = node;
+				if (node->next)
+				{
+					node->next->previous = node;
+				}
+
 				array->node = node;
 			}
 		}

@@ -32,16 +32,24 @@ int main(void)
 	QX_ASSERT(qxJsonArraySize(array) == 1);
 	QX_ASSERT(QX_JSON_IS_NULL(qxJsonArrayGet(array, 0)));
 	QX_ASSERT(qxJsonArrayGet(array, 1) == NULL);
+	/* N */
 
 	QX_ASSERT(qxJsonArrayPrependNew(array, qxJsonTrueNew()) == 0);
 	QX_ASSERT(qxJsonArraySize(array) == 2);
 	QX_ASSERT(QX_JSON_IS_TRUE(qxJsonArrayGet(array, 0)));
 	QX_ASSERT(QX_JSON_IS_NULL(qxJsonArrayGet(array, 1)));
 	QX_ASSERT(qxJsonArrayGet(array, 2) == NULL);
+	/* T N */
 
 	QX_ASSERT(qxJsonArrayInsertNew(array, 1, qxJsonFalseNew()) == 0);
 	QX_ASSERT(qxJsonArraySize(array) == 3);
 	QX_ASSERT(QX_JSON_IS_FALSE(qxJsonArrayGet(array, 1)));
+	/* T F N */
+
+	QX_ASSERT(qxJsonArrayInsertNew(array, 3, qxJsonTrueNew()) == 0);
+	QX_ASSERT(qxJsonArraySize(array) == 4);
+	QX_ASSERT(QX_JSON_IS_TRUE(qxJsonArrayGet(array, 3)));
+	/* T F N T */
 
 	qxJsonValueUnref(value);
 	return EXIT_SUCCESS;
