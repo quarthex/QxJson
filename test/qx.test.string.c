@@ -22,7 +22,7 @@ int main(void)
 	QX_ASSERT(string != NULL);
 	QX_ASSERT(qxJsonStringSize(string) == 5);
 	QX_ASSERT(memcmp(qxJsonStringData(string), L"Hello", 5 * sizeof(wchar_t)) == 0);
-	qxJsonValueDecRef(value);
+	qxJsonValueUnref(value);
 
 	return EXIT_SUCCESS;
 }

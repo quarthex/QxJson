@@ -13,7 +13,7 @@ int main(void)
 	QxJsonValue *const value = qxJsonTrueNew();
 	QX_ASSERT(value != NULL);
 	QX_ASSERT(QX_JSON_IS_TRUE(value));
-	qxJsonValueDecRef(value);
+	qxJsonValueUnref(value);
 	return EXIT_SUCCESS;
 }
 

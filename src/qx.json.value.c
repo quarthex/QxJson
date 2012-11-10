@@ -10,14 +10,14 @@
 #include "../include/qx.json.value.h"
 #include "qx.json.value.private.h"
 
-void qxJsonValueIncRef(QxJsonValue *value)
+void qxJsonValueRef(QxJsonValue *value)
 {
 	assert(value != NULL);
 	++value->ref;
 	return;
 }
 
-void qxJsonValueDecRef(QxJsonValue *value)
+void qxJsonValueUnref(QxJsonValue *value)
 {
 	assert(value != NULL);
 

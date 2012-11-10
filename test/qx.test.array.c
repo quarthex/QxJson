@@ -33,7 +33,7 @@ int main(void)
 	QX_ASSERT(QX_JSON_IS_NULL(qxJsonArrayGet(array, 1)));
 	QX_ASSERT(qxJsonArrayGet(array, 2) == NULL);
 
-	qxJsonValueDecRef(value);
+	qxJsonValueUnref(value);
 	return EXIT_SUCCESS;
 }
 

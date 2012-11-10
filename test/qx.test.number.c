@@ -35,12 +35,12 @@ int main(void)
 		number = QX_JSON_NUMBER(value);
 		QX_ASSERT(number != NULL);
 		QX_ASSERT(compareNumbers(qxJsonNumberValue(number), numbers[index]) == 0);
-		qxJsonValueDecRef(value);
+		qxJsonValueUnref(value);
 	}
 
 	value = qxJsonNumberNew(-0.);
 	QX_ASSERT(compareNumbers(qxJsonNumberValue(QX_JSON_NUMBER(value)), 0.) != 0);
-	qxJsonValueDecRef(value);
+	qxJsonValueUnref(value);
 
 	return EXIT_SUCCESS;
 }

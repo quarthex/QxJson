@@ -37,7 +37,7 @@ static void finalize(QxJsonValue *value)
 
 	while (array->head)
 	{
-		qxJsonValueDecRef(array->head->value);
+		qxJsonValueUnref(array->head->value);
 		node = array->head;
 		array->head = node->next;
 		free(node);

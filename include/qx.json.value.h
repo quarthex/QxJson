@@ -31,7 +31,7 @@ typedef enum QxJsonValueType
  * @brief Increment the reference counter of a value.
  * @param[in|out] value The value.
  */
-QX_API void qxJsonValueIncRef(QxJsonValue *value);
+QX_API void qxJsonValueRef(QxJsonValue *value);
 
 /**
  * @brief Decrement the reference counter of a value.
@@ -39,7 +39,7 @@ QX_API void qxJsonValueIncRef(QxJsonValue *value);
  *
  * When the reference counter reach zero, the value is freed.
  */
-QX_API void qxJsonValueDecRef(QxJsonValue *value);
+QX_API void qxJsonValueUnref(QxJsonValue *value);
 
 /**
  * @brief Get the type of the value.
