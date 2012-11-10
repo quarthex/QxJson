@@ -7,7 +7,7 @@
 #ifndef _H_QX_JSON_TRUE
 #define _H_QX_JSON_TRUE
 
-#include "qx.macro.h"
+#include "qx.json.macro.h"
 #include "qx.json.value.h"
 
 #define QX_JSON_IS_TRUE(value) QX_JSON_IS((value), True)

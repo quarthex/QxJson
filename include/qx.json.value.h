@@ -7,7 +7,7 @@
 #ifndef _H_QX_JSON_VALUE
 #define _H_QX_JSON_VALUE
 
-#include "qx.macro.h"
+#include "qx.json.macro.h"
 
 /**
  * @brief Variant type that handle any JavaScript value kind.

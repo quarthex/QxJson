@@ -7,7 +7,7 @@
 #ifndef _H_QX_JSON_NUMBER
 #define _H_QX_JSON_NUMBER
 
-#include "qx.macro.h"
+#include "qx.json.macro.h"
 #include "qx.json.value.h"
 
 #define QX_JSON_IS_NUMBER(value) QX_JSON_IS((value), Number)

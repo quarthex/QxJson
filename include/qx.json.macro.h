@@ -1,5 +1,5 @@
 /**
- * @file qx.macro.h
+ * @file qx.json.macro.h
  * @brief Various preprocessor macros used by the project.
  * @author Romain DEOUX
  */

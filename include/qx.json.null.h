@@ -7,7 +7,7 @@
 #ifndef _H_QX_JSON_NULL
 #define _H_QX_JSON_NULL
 
-#include "qx.macro.h"
+#include "qx.json.macro.h"
 #include "qx.json.value.h"
 
 #define QX_JSON_IS_NULL(value) QX_JSON_IS((value), Null)

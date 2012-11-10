@@ -7,7 +7,7 @@
 #ifndef _H_QX_JSON_ARRAY
 #define _H_QX_JSON_ARRAY
 
-#include "qx.macro.h"
+#include "qx.json.macro.h"
 #include "qx.json.value.h"
 
 #define QX_JSON_IS_ARRAY(value) QX_JSON_IS((value), Array)

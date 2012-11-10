@@ -8,7 +8,7 @@
 #define _H_QX_JSON_STRING
 
 #include <stddef.h>
-#include "qx.macro.h"
+#include "qx.json.macro.h"
 #include "qx.json.value.h"
 
 #define QX_JSON_IS_STRING(value) QX_JSON_IS((value), String)
