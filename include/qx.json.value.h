@@ -24,7 +24,8 @@ typedef enum QxJsonValueType
 	QxJsonValueTypeFalse,
 	QxJsonValueTypeNumber,
 	QxJsonValueTypeString,
-	QxJsonValueTypeArray
+	QxJsonValueTypeArray,
+	QxJsonValueTypeObject
 } QxJsonValueType;
 
 /**

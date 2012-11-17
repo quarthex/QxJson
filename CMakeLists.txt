@@ -11,7 +11,9 @@ add_library(QxJson SHARED
 	src/qx.json.false.c
 	src/qx.json.number.c
 	src/qx.json.string.c
-	src/qx.json.array.c)
+	src/qx.json.array.c
+	src/qx.json.object.c
+)
 set_target_properties(QxJson
 	PROPERTIES COMPILE_DEFINITIONS QX_JSON_BUILD)
 
