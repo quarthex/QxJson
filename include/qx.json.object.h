@@ -11,6 +11,7 @@
 #include "qx.json.value.h"
 
 #define QX_JSON_IS_OBJECT(value) QX_JSON_IS((value), Object)
+#define QX_JSON_OBJECT(value) QX_JSON_CAST((value), Object)
 
 /**
  * @brief Class that handle a JavaScript object value.
