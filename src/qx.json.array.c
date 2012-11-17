@@ -179,19 +179,54 @@ int qxJsonArrayInsert(QxJsonArray *array, size_t index,  QxJsonValue *value)
 int qxJsonArrayInsertNew(QxJsonArray *array, size_t index, QxJsonValue *value)
 {
 	Node *node;
+	size_t currentIndex;
 
 	if (array && value && (&array->parent != value))
 	{
 		if (array->node)
 		{
-			while (array->node->previous)
+			/* Compute the current index. */
+			node = array->node;
+
+			for (currentIndex = 0; node->previous; ++currentIndex)
 			{
-				array->node = array->node->previous;
+				node = node->previous;
 			}
 
-			for (; index > 0 && array->node->next; --index)
+			/* Search the shortest path to reach the wanted index. */
+			if ((index < currentIndex) && ((currentIndex - index) < index))
 			{
-				array->node = array->node->next;
+				/* The wanted node is just before the current one. */
+				for (; currentIndex != index; --currentIndex)
+				{
+					array->node = array->node->previous;
+				}
+			}
+			else
+			{
+				if (index < currentIndex)
+				{
+					/*
+					 * The wanted node is closer to the first node than to the
+					 * current one.
+					 * It will be reached in `index` nodes.
+					 */
+					array->node = node;
+				}
+				else
+				{
+					/*
+					 * The `currentIndex` first steps are cached and do not
+					 * need to be processed.
+					 */
+					index -= currentIndex;
+				}
+
+				while (index && array->node->next)
+				{
+					array->node = array->node->next;
+					++currentIndex;
+				}
 			}
 
 			node = ALLOC(Node);
