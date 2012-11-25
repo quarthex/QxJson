@@ -42,3 +42,12 @@ QxJsonValueType qxJsonValueType(QxJsonValue const *value)
 	return value->klass->type;
 }
 
+QxJsonValue *_qxJsonCast(QxJsonValue *value, QxJsonValueType type)
+{
+	if (value && value->klass->type == type)
+	{
+		return value;
+	}
+
+	return NULL;
+}
