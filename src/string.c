@@ -1,5 +1,5 @@
 /**
- * @file qx.json.string.c
+ * @file string.c
  * @brief Source file of the QxJsonString class.
  * @author Romain DEOUX
  */
@@ -9,7 +9,7 @@
 #include <string.h>
 
 #include "../include/qx.json.string.h"
-#include "qx.json.value.private.h"
+#include "value.private.h"
 
 #define ALLOC(type) ((type *)malloc(sizeof(type)))
 

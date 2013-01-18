@@ -6,7 +6,7 @@
 
 #include <qx.json.number.h>
 
-#include "qx.assert.h"
+#include "assert.h"
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
 

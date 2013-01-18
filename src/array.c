@@ -1,5 +1,5 @@
 /**
- * @file qx.json.array.c
+ * @file array.c
  * @brief Source file of the QxJsonArray class.
  * @author Romain DEOUX
  */
@@ -8,7 +8,7 @@
 #include <stdlib.h>
 
 #include "../include/qx.json.array.h"
-#include "qx.json.value.private.h"
+#include "value.private.h"
 
 #define ALLOC(type) ((type *)malloc(sizeof(type)))
 

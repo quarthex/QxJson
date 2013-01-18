@@ -5,15 +5,15 @@ project(QxJson)
 include_directories(../include)
 
 add_library(QxJson SHARED
-	src/qx.json.value.c
-	src/qx.json.null.c
-	src/qx.json.true.c
-	src/qx.json.false.c
-	src/qx.json.number.c
-	src/qx.json.string.c
-	src/qx.json.array.c
-	src/qx.json.object.c
-	src/qx.json.tockenizer.c
+	src/value.c
+	src/null.c
+	src/true.c
+	src/false.c
+	src/number.c
+	src/string.c
+	src/array.c
+	src/object.c
+	src/tockenizer.c
 )
 set_target_properties(QxJson
 	PROPERTIES COMPILE_DEFINITIONS QX_JSON_BUILD)

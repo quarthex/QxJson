@@ -6,7 +6,7 @@
 
 #include <qx.json.null.h>
 
-#include "qx.assert.h"
+#include "assert.h"
 
 int main(void)
 {

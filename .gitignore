@@ -10,12 +10,5 @@ cmake_install.cmake
 /libQxJson.so
 
 # tests
-/test/qx.array
-/test/qx.false
-/test/qx.null
-/test/qx.number
-/test/qx.object
-/test/qx.string
-/test/qx.tockenizer
-/test/qx.true
+/test/*.out
 

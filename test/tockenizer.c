@@ -6,7 +6,7 @@
 
 #include <qx.json.tockenizer.h>
 
-#include "qx.assert.h"
+#include "assert.h"
 
 static int tockenizerCallback(QxJsonTocken const *tocken)
 {

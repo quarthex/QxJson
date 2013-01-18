@@ -1,5 +1,5 @@
 /**
- * @file qx.json.object.c
+ * @file object.c
  * @brief Source file of the QxJsonObject class.
  * @author Romain DEOUX
  */
@@ -7,7 +7,7 @@
 #include <stdlib.h>
 
 #include "../include/qx.json.object.h"
-#include "qx.json.value.private.h"
+#include "value.private.h"
 
 #define ALLOC(type) ((type *)malloc(sizeof(type)))
 

@@ -1,6 +1,12 @@
-#include "../include/qx.json.tockenizer.h"
+/**
+ * @file tockenizer.c
+ * @brief Source file of the JSON tockenizer.
+ * @author Romain DEOUX
+ */
 
 #include <stdlib.h>
+
+#include "../include/qx.json.tockenizer.h"
 
 struct QxJsonTockenizer
 {

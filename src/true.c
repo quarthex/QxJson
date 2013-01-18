@@ -1,5 +1,5 @@
 /**
- * @file qx.json.true.c
+ * @file true.c
  * @brief Source file of the QxJsonTrue class.
  * @author Romain DEOUX
  */
@@ -7,7 +7,7 @@
 #include <stdlib.h>
 
 #include "../include/qx.json.true.h"
-#include "qx.json.value.private.h"
+#include "value.private.h"
 
 #define ALLOC(type) ((type *)malloc(sizeof(type)))
 
