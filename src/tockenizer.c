@@ -19,19 +19,21 @@ typedef QxJsonTockenizer Tockenizer;
 typedef QxJsonTocken     Tocken;
 typedef QxJsonTockenType TockenType;
 
+typedef struct Callbacks Callbacks;
+struct Callbacks
+{
+	int (*const write)(Tockenizer *self, wchar_t character);
+	int (*const flush)(Tockenizer *self);
+};
+
 struct QxJsonTockenizer
 {
 	Queue tockens;
-	Tocken *tocken;
-	wchar_t *buffer;
-	size_t bufferAlloc;
-	size_t bufferSize;
-	int (*write)(Tockenizer *self, wchar_t character);
-	int (*flush)(Tockenizer *self);
+	size_t offset; /* Working variable */
+	Callbacks const *callbacks;
 };
 
-static int writeDefault(Tockenizer *self, wchar_t character);
-static int flushDefault(Tockenizer *self);
+static Callbacks const callbacksDefault;
 
 Tockenizer *qxJsonTockenizerNew(void)
 {
@@ -40,18 +42,7 @@ Tockenizer *qxJsonTockenizerNew(void)
 	if (instance)
 	{
 		memset(instance, 0, sizeof(Tockenizer));
-
-		instance->buffer = (wchar_t *)malloc(sizeof(wchar_t) * 512);
-
-		if (!instance->buffer) /* Failed to allocate memory */
-		{
-			free(instance);
-			return NULL;
-		}
-
-		instance->bufferAlloc = 512;
-		instance->write = writeDefault;
-		instance->flush = flushDefault;
+		instance->callbacks = &callbacksDefault;
 	}
 
 	return instance;
@@ -68,7 +59,6 @@ void qxJsonTockenizerDelete(Tockenizer *self)
 		queuePop(&self->tockens);
 	}
 
-	free(self->buffer);
 	free(self);
 	return;
 }
@@ -87,7 +77,7 @@ int qxJsonTockenizerWrite(Tockenizer *self, wchar_t const *data, size_t size)
 
 	for (; !error && data != end; ++data)
 	{
-		error = self->write(self, *data);
+		error = self->callbacks->write(self, *data);
 	}
 
 	return error;
@@ -96,7 +86,7 @@ int qxJsonTockenizerWrite(Tockenizer *self, wchar_t const *data, size_t size)
 int qxJsonTockenizerFlush(Tockenizer *self)
 {
 	assert(self != NULL);
-	return self->flush(self);
+	return self->callbacks->flush(self);
 }
 
 int qxJsonTockenizerNextTocken(Tockenizer *self, Tocken *tocken)
@@ -118,8 +108,7 @@ int qxJsonTockenizerNextTocken(Tockenizer *self, Tocken *tocken)
 
 /* Private functions */
 
-static int writeNull(Tockenizer *tockenizer, wchar_t character);
-static int flushNull(Tockenizer *tockenizer);
+static Callbacks const callbacksNull;
 
 static int pushTocken(Tockenizer *tockenizer, TockenType type)
 {
@@ -171,9 +160,8 @@ static int writeDefault(Tockenizer *tockenizer, wchar_t character)
 		return -1;
 
 	case L'n':
-		memcpy(tockenizer->buffer, L"ull", 3 * sizeof(wchar_t));
-		tockenizer->write = writeNull;
-		tockenizer->flush = flushNull;
+		tockenizer->offset = 0;
+		tockenizer->callbacks = &callbacksNull;
 		return 0;
 
 	case L't':
@@ -203,23 +191,25 @@ static int flushDefault(Tockenizer *tockenizer)
 	return 0;
 }
 
+static Callbacks const callbacksDefault = { writeDefault, flushDefault };
+
 static int writeNull(Tockenizer *tockenizer, wchar_t character)
 {
-	if (character != tockenizer->buffer[tockenizer->bufferSize])
+	static wchar_t const tocken[3] = L"ull";
+
+	if (character != tocken[tockenizer->offset])
 	{
 		/* Unexpecting character */
 		return -1;
 	}
 
-	if (tockenizer->bufferSize == 2) /* Last character */
+	if (tockenizer->offset == 2) /* Last character */
 	{
-		tockenizer->write = writeDefault;
-		tockenizer->flush = flushDefault;
-		tockenizer->bufferSize = 0;
+		tockenizer->callbacks = &callbacksDefault;
 		return pushTocken(tockenizer, QxJsonTockenNull);
 	}
 
-	++tockenizer->bufferSize;
+	++tockenizer->offset;
 	return 0;
 }
 
@@ -229,4 +219,6 @@ static int flushNull(Tockenizer *tockenizer)
 	unused(tockenizer);
 	return -1;
 }
+
+static Callbacks const callbacksNull = { writeNull, flushNull };
 
