@@ -6,18 +6,90 @@
 
 #include <qx.json.tockenizer.h>
 
+#define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
 #include "assert.h"
 
-static int tockenizerCallback(QxJsonTocken const *tocken)
+static int testNew(void)
 {
-	return -1;
+	QxJsonTockenizer *const tockenizer = qxJsonTockenizerNew();
+	QX_ASSERT(tockenizer != NULL);
+	qxJsonTockenizerDelete(tockenizer);
+	return 0;
+}
+
+static int testArray(void)
+{
+	QxJsonTockenizer *const tockenizer = qxJsonTockenizerNew();
+	QxJsonTocken tocken;
+	wchar_t const text[] = L"[ , ]";
+	QxJsonTockenType const types[] = {
+		QxJsonTockenBeginArray,
+		QxJsonTockenValuesSeparator,
+		QxJsonTockenEndArray
+	};
+	size_t index = 0;
+
+	qxJsonTockenizerWrite(tockenizer, text, wcslen(text));
+
+	for (; index < ARRAY_SIZE(types); ++index)
+	{
+		QX_ASSERT(qxJsonTockenizerNextTocken(tockenizer, &tocken) == 1);
+		QX_ASSERT(tocken.type == types[index]);
+	}
+
+	QX_ASSERT(qxJsonTockenizerNextTocken(tockenizer, &tocken) == 0);
+	qxJsonTockenizerDelete(tockenizer);
+	return 0;
+}
+
+static int testObject(void)
+{
+	QxJsonTockenizer *const tockenizer = qxJsonTockenizerNew();
+	QxJsonTocken tocken;
+	wchar_t const text[] = L"{ : , : }";
+	QxJsonTockenType const types[] = {
+		QxJsonTockenBeginObject,
+		QxJsonTockenNameValueSeparator,
+		QxJsonTockenValuesSeparator,
+		QxJsonTockenNameValueSeparator,
+		QxJsonTockenEndObject,
+	};
+	size_t index = 0;
+
+	qxJsonTockenizerWrite(tockenizer, text, wcslen(text));
+
+	for (; index < ARRAY_SIZE(types); ++index)
+	{
+		QX_ASSERT(qxJsonTockenizerNextTocken(tockenizer, &tocken) == 1);
+		QX_ASSERT(tocken.type == types[index]);
+	}
+
+	QX_ASSERT(qxJsonTockenizerNextTocken(tockenizer, &tocken) == 0);
+	qxJsonTockenizerDelete(tockenizer);
+	return 0;
+}
+
+
+static int testNull(void)
+{
+	QxJsonTockenizer *const tockenizer = qxJsonTockenizerNew();
+	QxJsonTocken tocken;
+
+	qxJsonTockenizerWrite(tockenizer, L"null", 4);
+	QX_ASSERT(qxJsonTockenizerNextTocken(tockenizer, &tocken) == 1);
+	QX_ASSERT(tocken.type == QxJsonTockenNull);
+	QX_ASSERT(qxJsonTockenizerNextTocken(tockenizer, &tocken) == 0);
+
+	qxJsonTockenizerDelete(tockenizer);
+	return 0;
 }
 
 int main(void)
 {
-	QxJsonTockenizer *const tockenizer = qxJsonTockenizerNew(tockenizerCallback, NULL);
-	QX_ASSERT(tockenizer != NULL);
-	qxJsonTockenizerDelete(tockenizer);
+	testNew();
+	testArray();
+	testObject();
+	testNull();
 	return EXIT_SUCCESS;
 }
 

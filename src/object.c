@@ -53,7 +53,7 @@ static void finalize(QxJsonValue *value)
 			freeNode(object->node->previous->next);
 		}
 
-		freeNode(object->node);	
+		freeNode(object->node);
 	}
 
 	return;

@@ -26,7 +26,7 @@ enum QxJsonTockenType
 	QxJsonTockenTrue,
 	QxJsonTockenNull,
 	QxJsonTockenBeginArray,
-	QxJsonTockenValueSeparator,
+	QxJsonTockenValuesSeparator,
 	QxJsonTockenEndArray,
 	QxJsonTockenBeginObject,
 	QxJsonTockenNameValueSeparator,
@@ -40,31 +40,18 @@ typedef enum QxJsonTockenType QxJsonTockenType;
 struct QxJsonTocken
 {
 	QxJsonTockenType type;
-	wchar_t const *data;
-	size_t length;
-	void *userData;
 };
 typedef struct QxJsonTocken QxJsonTocken;
 
 /**
  * @brief Create a new tockenizer.
- * @param[in]  callback A pointer to a function called each time a new tocken
- *                      has been detected.
- * @param[out] userData An user defined pointer.
  * @return A tockenizer on success. A null pointer otherwise.
- *
- * If the called function returns a non 0 result, it is considered as a failure
- * and the value is returned by the caller (qxJsonTockenizerWrite or
- * qxJsonTockenizerFlush).
  */
-QX_API QxJsonTockenizer *qxJsonTockenizerNew(
-	int(*callback)(QxJsonTocken const *tocken), void *userData);
+QX_API QxJsonTockenizer *qxJsonTockenizerNew(void);
 
 /**
  * @brief Delete a tockenizer.
  * @param[out] tockenizer The tockenizer to be freed.
- *
- * Memory that could be allocated for the user pointer will not be freed.
  */
 QX_API void qxJsonTockenizerDelete(QxJsonTockenizer *tockenizer);
 
@@ -72,11 +59,11 @@ QX_API void qxJsonTockenizerDelete(QxJsonTockenizer *tockenizer);
  * @brief Write data to the tockenizer.
  * @param[out] tockenizer The tockenizer.
  * @param[in] data The unicode data to be written.
- * @param[in] length The characters count.
+ * @param[in] size The characters count.
  * @return 0 on success.
  */
 QX_API int qxJsonTockenizerWrite(QxJsonTockenizer *tockenizer,
-	wchar_t const *data, size_t length);
+	wchar_t const *data, size_t size);
 
 /**
  * @brief Flush the JSON stream.
@@ -87,6 +74,17 @@ QX_API int qxJsonTockenizerWrite(QxJsonTockenizer *tockenizer,
  * For instance, it might be usefull to end up plain decimal number parsing.
  */
 QX_API int qxJsonTockenizerFlush(QxJsonTockenizer *tockenizer);
+
+/**
+ * @brief Get the next tocken in the pending tocken list of the tockenizer.
+ * @param[in] tockenizer The tockenizer.
+ * @param[out] tocken A valid pointer to a QxJsonTocken instance.
+ * @return 1 if a tocken was successfully copied to @c tocken.
+ *         0 if the tockens list is empty.
+ *         Any other return values indicate a failure.
+ */
+QX_API int qxJsonTockenizerNextTocken(QxJsonTockenizer *tockenizer,
+	QxJsonTocken *tocken);
 
 #endif /* _H_QX_JSON_TOCKENIZER */
 

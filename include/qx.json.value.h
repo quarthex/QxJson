@@ -73,7 +73,7 @@ QX_API QxJsonValueType qxJsonValueType(QxJsonValue const *value);
  * @brief Private function used by the QX_JSON_CAST macro.
  * @param[in] value The value to be casted.
  * @param[in] type The type of the returned value.
- * @return @c value if it has the type @c type or a nul pointer otherwise. 
+ * @return @c value if it has the type @c type or a nul pointer otherwise.
  */
 QX_API QxJsonValue *_qxJsonCast(QxJsonValue *value, QxJsonValueType type);
 

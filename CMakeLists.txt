@@ -14,6 +14,7 @@ add_library(QxJson SHARED
 	src/array.c
 	src/object.c
 	src/tockenizer.c
+	src/queue.c
 )
 set_target_properties(QxJson
 	PROPERTIES COMPILE_DEFINITIONS QX_JSON_BUILD)
