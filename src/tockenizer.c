@@ -110,6 +110,8 @@ int qxJsonTockenizerNextTocken(Tockenizer *self, Tocken *tocken)
 /* Private functions */
 
 static Callbacks const callbacksNull;
+static Callbacks const callbacksTrue;
+static Callbacks const callbacksFalse;
 
 static int pushTocken(Tockenizer *tockenizer, TockenType type)
 {
@@ -157,8 +159,9 @@ static int writeDefault(Tockenizer *tockenizer, wchar_t character)
 		return pushTocken(tockenizer, QxJsonTockenEndArray);
 
 	case L'f':
-		/* Not yet implemented */
-		return -1;
+		tockenizer->offset = 0;
+		tockenizer->callbacks = &callbacksFalse;
+		return 0;
 
 	case L'n':
 		tockenizer->offset = 0;
@@ -166,7 +169,9 @@ static int writeDefault(Tockenizer *tockenizer, wchar_t character)
 		return 0;
 
 	case L't':
-		return -1; /* Not yet implemented */
+		tockenizer->offset = 0;
+		tockenizer->callbacks = &callbacksTrue;
+		return 0;
 
 	case L'{':
 		return pushTocken(tockenizer, QxJsonTockenBeginObject);
@@ -222,4 +227,62 @@ static int flushNull(Tockenizer *tockenizer)
 }
 
 static Callbacks const callbacksNull = { writeNull, flushNull };
+
+static int writeTrue(Tockenizer *tockenizer, wchar_t character)
+{
+	static wchar_t const tocken[3] = L"rue";
+
+	if (character != tocken[tockenizer->offset])
+	{
+		/* Unexpecting character */
+		return -1;
+	}
+
+	if (tockenizer->offset == 2) /* Last character */
+	{
+		tockenizer->callbacks = &callbacksDefault;
+		return pushTocken(tockenizer, QxJsonTockenTrue);
+	}
+
+	++tockenizer->offset;
+	return 0;
+}
+
+static int flushTrue(Tockenizer *tockenizer)
+{
+	/* Unflushable */
+	unused(tockenizer);
+	return -1;
+}
+
+static Callbacks const callbacksTrue = { writeTrue, flushTrue };
+
+static int writeFalse(Tockenizer *tockenizer, wchar_t character)
+{
+	static wchar_t const tocken[4] = L"alse";
+
+	if (character != tocken[tockenizer->offset])
+	{
+		/* Unexpecting character */
+		return -1;
+	}
+
+	if (tockenizer->offset == 3) /* Last character */
+	{
+		tockenizer->callbacks = &callbacksDefault;
+		return pushTocken(tockenizer, QxJsonTockenFalse);
+	}
+
+	++tockenizer->offset;
+	return 0;
+}
+
+static int flushFalse(Tockenizer *tockenizer)
+{
+	/* Unflushable */
+	unused(tockenizer);
+	return -1;
+}
+
+static Callbacks const callbacksFalse = { writeFalse, flushFalse };
 
