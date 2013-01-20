@@ -7,6 +7,8 @@
 #include <qx.json.tockenizer.h>
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
+#define WCSLEN(str) (ARRAY_SIZE(str) - 1)
+
 #include "assert.h"
 
 static int testNew(void)
@@ -29,7 +31,7 @@ static int testArray(void)
 	};
 	size_t index = 0;
 
-	qxJsonTockenizerWrite(tockenizer, text, wcslen(text));
+	qxJsonTockenizerWrite(tockenizer, text, WCSLEN(text));
 
 	for (; index < ARRAY_SIZE(types); ++index)
 	{
@@ -56,7 +58,7 @@ static int testObject(void)
 	};
 	size_t index = 0;
 
-	qxJsonTockenizerWrite(tockenizer, text, wcslen(text));
+	qxJsonTockenizerWrite(tockenizer, text, WCSLEN(text));
 
 	for (; index < ARRAY_SIZE(types); ++index)
 	{

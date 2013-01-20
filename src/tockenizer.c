@@ -98,6 +98,7 @@ int qxJsonTockenizerNextTocken(Tockenizer *self, Tocken *tocken)
 	if (tail)
 	{
 		memcpy(tocken, tail, sizeof(Tocken));
+		free(tail);
 		queuePop(&self->tockens);
 		return 1;
 	}
