@@ -75,6 +75,16 @@ void qxJsonTockenizerDelete(Tockenizer *self)
 		queuePop(&self->tockens);
 	}
 
+	if (self->charBuffer)
+	{
+		free(self->charBuffer);
+	}
+
+	if (self->wcharBuffer)
+	{
+		free(self->wcharBuffer);
+	}
+
 	free(self);
 	return;
 }
@@ -298,21 +308,12 @@ static Callbacks const callbacksFalse = { writeFalse, flushFail };
 
 static int writeString(Tockenizer *tockenizer, wchar_t character)
 {
-	Tocken *tocken;
 	wchar_t *dataTmp;
 	int pushTockenResult;
 
 	if (character == L'"')
 	{
 		/* End of the string => push it to the tockens queue */
-		tocken = ALLOC(Tocken);
-
-		if (!tocken)
-		{
-			/* Failed to allocate memory */
-			return -1;
-		}
-
 		pushTockenResult = pushTocken(tockenizer, QxJsonTockenString,
 			tockenizer->wcharBuffer + tockenizer->wcharSize, tockenizer->size);
 
