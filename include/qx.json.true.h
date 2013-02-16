@@ -24,4 +24,3 @@ typedef struct QxJsonTrue QxJsonTrue;
 QX_API QxJsonValue *qxJsonTrueNew(void);
 
 #endif /* _H_QX_JSON_TRUE */
-

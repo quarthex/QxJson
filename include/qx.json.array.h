@@ -103,4 +103,3 @@ int qxJsonArrayInsertNew(QxJsonArray *array, size_t index, QxJsonValue *value);
 QxJsonValue const *qxJsonArrayGet(QxJsonArray *array, size_t index);
 
 #endif /* _H_QX_JSON_ARRAY */
-

@@ -28,4 +28,3 @@ int main(void)
 	qxJsonValueUnref(value);
 	return EXIT_SUCCESS;
 }
-

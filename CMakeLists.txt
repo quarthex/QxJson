@@ -23,13 +23,13 @@ add_library(QxJson SHARED
 	src/null.c
 	src/number.c
 	src/object.c
-	src/queue.c
-	src/queue.h
 	src/string.c
 	src/tockenizer.c
 	src/true.c
 	src/value.c
 	src/value.private.h
+	src/tools/queue.c
+	src/tools/queue.h
 )
 set_target_properties(QxJson
 	PROPERTIES COMPILE_DEFINITIONS QX_JSON_BUILD)

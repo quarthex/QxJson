@@ -42,4 +42,3 @@ struct QxJsonValue
 };
 
 #endif /* _H_QX_JSON_VALUE_PRIVATE_H */
-

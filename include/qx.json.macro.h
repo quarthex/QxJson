@@ -20,4 +20,3 @@
 #endif
 
 #endif /* _H_QX_MACRO */
-

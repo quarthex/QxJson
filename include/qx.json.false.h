@@ -24,4 +24,3 @@ typedef struct QxJsonFalse QxJsonFalse;
 QX_API QxJsonValue *qxJsonFalseNew(void);
 
 #endif /* _H_QX_JSON_FALSE */
-

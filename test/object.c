@@ -34,4 +34,3 @@ int main(void)
 	qxJsonValueUnref((QxJsonValue *)(object));
 	return EXIT_SUCCESS;
 }
-

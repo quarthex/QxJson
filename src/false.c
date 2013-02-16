@@ -35,4 +35,3 @@ QxJsonValue *qxJsonFalseNew(void)
 
 	return instance;
 }
-

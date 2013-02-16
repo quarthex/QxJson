@@ -56,4 +56,3 @@ qx_json_number_t qxJsonNumberValue(QxJsonNumber const *number)
 
 	return 0.;
 }
-

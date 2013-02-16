@@ -78,4 +78,3 @@ QX_API QxJsonValueType qxJsonValueType(QxJsonValue const *value);
 QX_API QxJsonValue *_qxJsonCast(QxJsonValue *value, QxJsonValueType type);
 
 #endif /* _H_QX_JSON_VALUE */
-

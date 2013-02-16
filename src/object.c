@@ -270,4 +270,3 @@ size_t qxJsonObjectSize(QxJsonObject *object)
 
 	return 0;
 }
-

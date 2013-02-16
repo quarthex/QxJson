@@ -9,7 +9,7 @@
 #include <string.h>
 
 #include "../include/qx.json.tockenizer.h"
-#include "queue.h"
+#include "tools/queue.h"
 
 #define ALLOC(Type) ((Type *)malloc(sizeof(Type)))
 #define unused(x) ((void)(x))

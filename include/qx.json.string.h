@@ -51,4 +51,3 @@ QX_API qx_json_string_t qxJsonStringData(QxJsonString const *string);
 QX_API size_t qxJsonStringSize(QxJsonString const *string);
 
 #endif /* _H_QX_JSON_STRING */
-

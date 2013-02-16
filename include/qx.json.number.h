@@ -38,4 +38,3 @@ QX_API QxJsonValue *qxJsonNumberNew(qx_json_number_t number);
 QX_API qx_json_number_t qxJsonNumberValue(QxJsonNumber const *number);
 
 #endif /* _H_QX_JSON_NUMBER */
-

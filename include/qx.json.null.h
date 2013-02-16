@@ -24,4 +24,3 @@ typedef struct QxJsonNull QxJsonNull;
 QX_API QxJsonValue *qxJsonNullNew(void);
 
 #endif /* _H_QX_JSON_NULL */
-

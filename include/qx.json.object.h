@@ -52,4 +52,3 @@ QX_API int qxJsonObjectUnset(QxJsonObject *object, QxJsonString *key);
 QX_API size_t qxJsonObjectSize(QxJsonObject *object);
 
 #endif /* _H_QX_JSON_OBJECT */
-

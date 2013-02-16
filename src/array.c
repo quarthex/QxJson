@@ -301,4 +301,3 @@ QxJsonValue const *qxJsonArrayGet(QxJsonArray *array, size_t index)
 
 	return NULL;
 }
-
