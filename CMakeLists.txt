@@ -15,7 +15,7 @@ add_library(QxJson SHARED
 	include/qx.json.number.h
 	include/qx.json.object.h
 	include/qx.json.string.h
-	include/qx.json.tockenizer.h
+	include/qx.json.tokenizer.h
 	include/qx.json.true.h
 	include/qx.json.value.h
 	src/array.c
@@ -24,12 +24,10 @@ add_library(QxJson SHARED
 	src/number.c
 	src/object.c
 	src/string.c
-	src/tockenizer.c
+	src/tokenizer.c
 	src/true.c
 	src/value.c
 	src/value.private.h
-	src/tools/queue.c
-	src/tools/queue.h
 )
 set_target_properties(QxJson
 	PROPERTIES COMPILE_DEFINITIONS QX_JSON_BUILD)
