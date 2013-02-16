@@ -4,11 +4,14 @@
  * @author Romain DEOUX
  */
 
+#ifndef _H_QX_QUEUE
+#define _H_QX_QUEUE
+
 typedef struct QueueNode QueueNode;
 struct QueueNode
 {
 	void *data;
-	struct QueueNode *next;
+	QueueNode *next;
 };
 
 typedef struct Queue Queue;
@@ -22,3 +25,4 @@ int queuePush(Queue *self, void *data);
 void *queueTail(Queue const *self);
 void queuePop(Queue *self);
 
+#endif /* _H_QX_QUEUE */

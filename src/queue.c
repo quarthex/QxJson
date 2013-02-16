@@ -64,4 +64,3 @@ void queuePop(Queue *self)
 
 	return;
 }
-

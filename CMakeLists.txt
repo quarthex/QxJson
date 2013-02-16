@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 2.6)
 project(QxJson)
 
 include_directories(../include)
+if(CMAKE_COMPILER_IS_GNUCC)
+	add_definitions(-W -Wall -pedantic)
+endif()
 
 add_library(QxJson SHARED
 	src/value.c

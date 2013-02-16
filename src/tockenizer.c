@@ -13,6 +13,7 @@
 
 #define ALLOC(Type) ((Type *)malloc(sizeof(Type)))
 #define unused(x) ((void)(x))
+#define MEMORY_ALLOC_SIZE 512
 
 /* Some shortcuts */
 typedef QxJsonTockenizer Tockenizer;
@@ -28,9 +29,24 @@ struct Callbacks
 
 struct QxJsonTockenizer
 {
+	/* Tockens queue */
 	Queue tockens;
-	size_t offset; /* Working variable */
+
+	/* Parsing working variable */
+	size_t size;
+
+	/* Parsing state */
 	Callbacks const *callbacks;
+
+	/* char buffer */
+	char *charBuffer;
+	size_t charSize;
+	size_t charAlloc;
+
+	/* wchar_t buffer */
+	wchar_t *wcharBuffer;
+	size_t wcharAlloc;
+	size_t wcharSize;
 };
 
 static Callbacks const callbacksDefault;
@@ -77,6 +93,8 @@ int qxJsonTockenizerWrite(Tockenizer *self, wchar_t const *data, size_t size)
 
 	for (; !error && data != end; ++data)
 	{
+		assert(self->callbacks != NULL);
+		assert(self->callbacks->write != NULL);
 		error = self->callbacks->write(self, *data);
 	}
 
@@ -112,8 +130,17 @@ int qxJsonTockenizerNextTocken(Tockenizer *self, Tocken *tocken)
 static Callbacks const callbacksNull;
 static Callbacks const callbacksTrue;
 static Callbacks const callbacksFalse;
+static Callbacks const callbacksString;
 
-static int pushTocken(Tockenizer *tockenizer, TockenType type)
+static int flushFail(Tockenizer *tockenizer)
+{
+	/* Unflushabled */
+	unused(tockenizer);
+	return -1;
+}
+
+static int pushTocken(Tockenizer *tockenizer, TockenType type,
+	wchar_t const *data, size_t size)
 {
 	Tocken *const tocken = ALLOC(Tocken);
 
@@ -123,6 +150,8 @@ static int pushTocken(Tockenizer *tockenizer, TockenType type)
 	}
 
 	tocken->type = type;
+	tocken->data = data;
+	tocken->size = size;
 	return queuePush(&tockenizer->tockens, tocken);
 }
 
@@ -138,10 +167,12 @@ static int writeDefault(Tockenizer *tockenizer, wchar_t character)
 		return 0;
 
 	case L'"':
-		return -1; /* Not yet implemented */
+		tockenizer->size = 0;
+		tockenizer->callbacks = &callbacksString;
+		return 0;
 
 	case L',':
-		return pushTocken(tockenizer, QxJsonTockenValuesSeparator);
+		return pushTocken(tockenizer, QxJsonTockenValuesSeparator, NULL, 0);
 
 	case L'-':
 		return -1; /* Not yet implemented */
@@ -150,34 +181,34 @@ static int writeDefault(Tockenizer *tockenizer, wchar_t character)
 		return -1; /* Not yet implemented */
 
 	case L':':
-		return pushTocken(tockenizer, QxJsonTockenNameValueSeparator);
+		return pushTocken(tockenizer, QxJsonTockenNameValueSeparator, NULL, 0);
 
 	case L'[':
-		return pushTocken(tockenizer, QxJsonTockenBeginArray);
+		return pushTocken(tockenizer, QxJsonTockenBeginArray, NULL, 0);
 
 	case L']':
-		return pushTocken(tockenizer, QxJsonTockenEndArray);
+		return pushTocken(tockenizer, QxJsonTockenEndArray, NULL, 0);
 
 	case L'f':
-		tockenizer->offset = 0;
+		tockenizer->size = 0;
 		tockenizer->callbacks = &callbacksFalse;
 		return 0;
 
 	case L'n':
-		tockenizer->offset = 0;
+		tockenizer->size = 0;
 		tockenizer->callbacks = &callbacksNull;
 		return 0;
 
 	case L't':
-		tockenizer->offset = 0;
+		tockenizer->size = 0;
 		tockenizer->callbacks = &callbacksTrue;
 		return 0;
 
 	case L'{':
-		return pushTocken(tockenizer, QxJsonTockenBeginObject);
+		return pushTocken(tockenizer, QxJsonTockenBeginObject, NULL, 0);
 
 	case L'}':
-		return pushTocken(tockenizer, QxJsonTockenEndObject);
+		return pushTocken(tockenizer, QxJsonTockenEndObject, NULL, 0);
 
 	default:
 		if (character >= L'1' && character <= L'9')
@@ -203,86 +234,113 @@ static int writeNull(Tockenizer *tockenizer, wchar_t character)
 {
 	static wchar_t const tocken[3] = L"ull";
 
-	if (character != tocken[tockenizer->offset])
+	if (character != tocken[tockenizer->size])
 	{
 		/* Unexpecting character */
 		return -1;
 	}
 
-	if (tockenizer->offset == 2) /* Last character */
+	if (tockenizer->size == 2) /* Last character */
 	{
 		tockenizer->callbacks = &callbacksDefault;
-		return pushTocken(tockenizer, QxJsonTockenNull);
+		return pushTocken(tockenizer, QxJsonTockenNull, NULL, 0);
 	}
 
-	++tockenizer->offset;
+	++tockenizer->size;
 	return 0;
 }
 
-static int flushNull(Tockenizer *tockenizer)
-{
-	/* Unflushable */
-	unused(tockenizer);
-	return -1;
-}
-
-static Callbacks const callbacksNull = { writeNull, flushNull };
+static Callbacks const callbacksNull = { writeNull, flushFail };
 
 static int writeTrue(Tockenizer *tockenizer, wchar_t character)
 {
 	static wchar_t const tocken[3] = L"rue";
 
-	if (character != tocken[tockenizer->offset])
+	if (character != tocken[tockenizer->size])
 	{
 		/* Unexpecting character */
 		return -1;
 	}
 
-	if (tockenizer->offset == 2) /* Last character */
+	if (tockenizer->size == 2) /* Last character */
 	{
 		tockenizer->callbacks = &callbacksDefault;
-		return pushTocken(tockenizer, QxJsonTockenTrue);
+		return pushTocken(tockenizer, QxJsonTockenTrue, NULL, 0);
 	}
 
-	++tockenizer->offset;
+	++tockenizer->size;
 	return 0;
 }
 
-static int flushTrue(Tockenizer *tockenizer)
-{
-	/* Unflushable */
-	unused(tockenizer);
-	return -1;
-}
-
-static Callbacks const callbacksTrue = { writeTrue, flushTrue };
+static Callbacks const callbacksTrue = { writeTrue, flushFail };
 
 static int writeFalse(Tockenizer *tockenizer, wchar_t character)
 {
 	static wchar_t const tocken[4] = L"alse";
 
-	if (character != tocken[tockenizer->offset])
+	if (character != tocken[tockenizer->size])
 	{
 		/* Unexpecting character */
 		return -1;
 	}
 
-	if (tockenizer->offset == 3) /* Last character */
+	if (tockenizer->size == 3) /* Last character */
 	{
 		tockenizer->callbacks = &callbacksDefault;
-		return pushTocken(tockenizer, QxJsonTockenFalse);
+		return pushTocken(tockenizer, QxJsonTockenFalse, NULL, 0);
 	}
 
-	++tockenizer->offset;
+	++tockenizer->size;
 	return 0;
 }
 
-static int flushFalse(Tockenizer *tockenizer)
+static Callbacks const callbacksFalse = { writeFalse, flushFail };
+
+static int writeString(Tockenizer *tockenizer, wchar_t character)
 {
-	/* Unflushable */
-	unused(tockenizer);
-	return -1;
+	Tocken *tocken;
+	wchar_t *dataTmp;
+	int pushTockenResult;
+
+	if (character == L'"')
+	{
+		/* End of the string => push it to the tockens queue */
+		tocken = ALLOC(Tocken);
+
+		if (!tocken)
+		{
+			/* Failed to allocate memory */
+			return -1;
+		}
+
+		pushTockenResult = pushTocken(tockenizer, QxJsonTockenString,
+			tockenizer->wcharBuffer + tockenizer->wcharSize, tockenizer->size);
+
+		if (pushTockenResult == 0)
+		{
+			tockenizer->wcharSize += tockenizer->size;
+		}
+
+		return pushTockenResult;
+	}
+
+	if (tockenizer->wcharSize + tockenizer->size == tockenizer->wcharAlloc)
+	{
+		tockenizer->wcharAlloc += MEMORY_ALLOC_SIZE;
+		dataTmp = realloc(tockenizer->wcharBuffer,
+			tockenizer->wcharAlloc * sizeof(wchar_t));
+
+		if (dataTmp == NULL)
+		{
+			return -1; /* Failed to allocate more memory */
+		}
+
+		tockenizer->wcharBuffer = dataTmp;
+	}
+
+	tockenizer->wcharBuffer[tockenizer->wcharSize + tockenizer->size] = character;
+	++tockenizer->size;
+	return 0;
 }
 
-static Callbacks const callbacksFalse = { writeFalse, flushFalse };
-
+static Callbacks const callbacksString = { writeString, flushFail };

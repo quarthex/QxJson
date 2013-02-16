@@ -73,4 +73,3 @@ size_t qxJsonStringSize(QxJsonString const *string)
 {
 	return string ? string->size : 0;
 }
-

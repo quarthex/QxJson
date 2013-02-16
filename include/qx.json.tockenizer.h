@@ -40,6 +40,8 @@ typedef enum QxJsonTockenType QxJsonTockenType;
 struct QxJsonTocken
 {
 	QxJsonTockenType type;
+	wchar_t const *data;
+	size_t size;
 };
 typedef struct QxJsonTocken QxJsonTocken;
 
@@ -87,4 +89,3 @@ QX_API int qxJsonTockenizerNextTocken(QxJsonTockenizer *tockenizer,
 	QxJsonTocken *tocken);
 
 #endif /* _H_QX_JSON_TOCKENIZER */
-

@@ -114,6 +114,20 @@ static int testFalse(void)
 	return 0;
 }
 
+static int testString(void)
+{
+	QxJsonTockenizer *const tockenizer = qxJsonTockenizerNew();
+	QxJsonTocken tocken;
+
+	qxJsonTockenizerWrite(tockenizer, L"\"\"", 5);
+	QX_ASSERT(qxJsonTockenizerNextTocken(tockenizer, &tocken) == 1);
+	QX_ASSERT(tocken.type == QxJsonTockenString);
+	QX_ASSERT(qxJsonTockenizerNextTocken(tockenizer, &tocken) == 0);
+
+	qxJsonTockenizerDelete(tockenizer);
+	return 0;
+}
+
 int main(void)
 {
 	testNew();
@@ -122,6 +136,6 @@ int main(void)
 	testNull();
 	testTrue();
 	testFalse();
+	testString();
 	return EXIT_SUCCESS;
 }
-

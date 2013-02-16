@@ -5,6 +5,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "../include/qx.json.object.h"
 #include "value.private.h"

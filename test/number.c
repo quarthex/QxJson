@@ -4,6 +4,8 @@
  * @author Romain DEOUX
  */
 
+#include <string.h>
+
 #include <qx.json.number.h>
 
 #include "assert.h"
