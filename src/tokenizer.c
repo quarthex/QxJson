@@ -177,7 +177,7 @@ static int Tokenizer_writeDefault(Tokenizer *self)
 
 	case L'"':
 		++self->data;
-		self->callbacks = &Tokenizer_callbacksDefault;
+		self->callbacks = &Tokenizer_callbacksString;
 		return 0;
 
 	case L',':
@@ -285,6 +285,7 @@ static int Tokenizer_writeString(Tokenizer *self)
 	{
 		if (*self->data == L'"') /* End of the string */
 		{
+			++self->data;
 			self->callbacks = &Tokenizer_callbacksDefault;
 			return self->callback(&self->token, self->userData);
 		}

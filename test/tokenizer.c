@@ -4,6 +4,7 @@
  * @author Romain DEOUX
  */
 
+#include <string.h>
 #include <wchar.h>
 #include <qx.json.tokenizer.h>
 
@@ -128,11 +129,17 @@ static int testStringHandler(Token const *token, void *userData)
 		QX_ASSERT(token->size == 0);
 		break;
 
+	case 1:
+		QX_ASSERT(token->size == 6);
+		QX_ASSERT(memcmp(token->data, L"QxJson", 6 * sizeof(wchar_t)) == 0);
+		break;
+
 	default:
 		QX_ASSERT(0 /* Unexpected token */);
 		break;
 	}
 
+	++*index;
 	return 0;
 }
 
@@ -144,7 +151,10 @@ static void testString(void)
 	QX_ASSERT(tokenizer != NULL);
 	QxJsonTokenizer_setHandler(tokenizer, testStringHandler, &index);
 
-	QX_ASSERT(QxJsonTokenizer_write(tokenizer, L"\"\" true", 2) == 0);
+	QX_ASSERT(QxJsonTokenizer_write(tokenizer, L"\"\"", 2) == 0);
+	QX_ASSERT(QxJsonTokenizer_flush(tokenizer) == 0);
+
+	QX_ASSERT(QxJsonTokenizer_write(tokenizer, L"\"QxJson\"", 8) == 0);
 	QX_ASSERT(QxJsonTokenizer_flush(tokenizer) == 0);
 
 	QxJsonTokenizer_delete(tokenizer);
