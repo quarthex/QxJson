@@ -10,8 +10,6 @@
 
 #include "../include/qx.json.tokenizer.h"
 
-#define unused(x) ((void)(x))
-
 /* Some alias */
 typedef QxJsonTokenizer Tokenizer;
 typedef QxJsonToken     Token;
@@ -156,7 +154,7 @@ static int Tokenizer_raiseAtom(Tokenizer *self, TokenType type)
 static int Tokenizer_flushFail(Tokenizer *self)
 {
 	/* Unflushabled */
-	unused(self);
+	QX_UNUSED(self);
 	return -1;
 }
 
@@ -238,7 +236,7 @@ static int Tokenizer_writeDefault(Tokenizer *self)
 static int Tokenizer_flushDefault(Tokenizer *self)
 {
 	/* Idle state, nothing in the buffer */
-	unused(self);
+	QX_UNUSED(self);
 	return 0;
 }
 
