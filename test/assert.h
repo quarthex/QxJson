@@ -8,13 +8,17 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
+
+#define _QX_ERROR(message) \
+	fwrite((message), sizeof(char), sizeof(message), stderr)
 
 /**
  * @brief Exit the program with a failure exit code if the assertion failed.
  */
 #define QX_ASSERT(condition) do { \
 	if (!(condition)) { \
-		printf("Assertion failed: `" #condition "`\n"); \
+		_QX_ERROR("Assertion failed: `" #condition "`\n"); \
 		exit(EXIT_FAILURE); \
 	} \
 } while(0)

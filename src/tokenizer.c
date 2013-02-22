@@ -30,6 +30,7 @@ struct Callbacks
 static Callbacks const Tokenizer_callbacksDefault;
 static Callbacks const Tokenizer_callbacksAtom;
 static Callbacks const Tokenizer_callbacksString;
+static Callbacks const Tokenizer_callbacksStringEscape;
 
 /* Public implementations */
 
@@ -290,6 +291,13 @@ static int Tokenizer_writeString(Tokenizer *self)
 			return self->callback(&self->token, self->userData);
 		}
 
+		if (*self->data == L'\\') /* Escaped sequence */
+		{
+			++self->data;
+			self->callbacks = &Tokenizer_callbacksStringEscape;
+			return 0;
+		}
+
 		if (self->token.size == self->alloc)
 		{
 			if (Tokenizer_grow(self) != 0)
@@ -308,5 +316,53 @@ static int Tokenizer_writeString(Tokenizer *self)
 
 static Callbacks const Tokenizer_callbacksString = {
 	Tokenizer_writeString,
+	Tokenizer_flushFail
+};
+
+static int Tokenizer_writeStringEscape(Tokenizer *self)
+{
+	assert(self != NULL);
+
+	switch (*self->data)
+	{
+	case L'"':
+	case L'/':
+	case L'\\':
+		self->token.data[self->token.size] = *self->data;
+		break;
+
+	case L'b':
+		self->token.data[self->token.size] = L'\b';
+		break;
+
+	case L'f':
+		self->token.data[self->token.size] = L'\f';
+		break;
+
+	case L'n':
+		self->token.data[self->token.size] = L'\n';
+		break;
+
+	case L'r':
+		self->token.data[self->token.size] = L'\r';
+		break;
+
+	case L't':
+		self->token.data[self->token.size] = L'\t';
+		break;
+
+	default:
+		/* Unexpected sequence */
+		return -1;
+	}
+
+	++self->data;
+	++self->token.size;
+	self->callbacks = &Tokenizer_callbacksString;
+	return 0;
+}
+
+static Callbacks const Tokenizer_callbacksStringEscape = {
+	Tokenizer_writeStringEscape,
 	Tokenizer_flushFail
 };

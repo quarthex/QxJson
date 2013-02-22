@@ -119,10 +119,12 @@ static void testFalse(void)
 static void testString(void)
 {
 	Token const tokens[] = {
-		{ QxJsonTokenString, L""      , 0 },
-		{ QxJsonTokenString, L"QxJson", 6 }
+		{ QxJsonTokenString, L""          , 0 },
+		{ QxJsonTokenString, L"QxJson"    , 6 },
+		{ QxJsonTokenString, L"[\r,\n,\t]", 7 }
 	};
-	testGeneric(L"\"\"" L"\"QxJson\"", tokens, ARRAY_SIZE(tokens));
+	testGeneric(L"\"\"" L"\"QxJson\"" L"\"[\\r,\\n,\\t]\"",
+		tokens, ARRAY_SIZE(tokens));
 	return;
 }
 
