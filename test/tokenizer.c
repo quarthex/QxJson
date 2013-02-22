@@ -9,7 +9,6 @@
 #include <qx.json.tokenizer.h>
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
-#define WCSLEN(str) (ARRAY_SIZE(str) - 1)
 
 #include "assert.h"
 
@@ -21,26 +20,29 @@ typedef struct GenericTest GenericTest;
 struct GenericTest
 {
 	size_t index;
-	TokenType const *types;
-	size_t typesCount;
-	void (*overload)(Token const *token, int index);
+	Token const *tokens;
+	size_t tokensCount;
 };
 
 static int testGenericCallback(Token const *token, void *userData)
 {
 	GenericTest *const gt = (GenericTest *)userData;
+	Token const *expected;
 
-	if (gt->index == gt->typesCount)
+	if (gt->index == gt->tokensCount)
 	{
 		QX_ASSERT(0 /* Unexpected token */);
 	}
 	else
 	{
-		QX_ASSERT(token->type == gt->types[gt->index]);
+		expected = &gt->tokens[gt->index];
+		QX_ASSERT(token->type == expected->type);
+		QX_ASSERT(token->size == expected->size);
 
-		if (gt->overload)
+		if (token->size)
 		{
-			gt->overload(token, gt->index);
+			QX_ASSERT(memcmp(token->data, expected->data,
+				token->size * sizeof(wchar_t)) == 0);
 		}
 
 		++gt->index;
@@ -49,115 +51,78 @@ static int testGenericCallback(Token const *token, void *userData)
 	return 0;
 }
 
-static void testGeneric(wchar_t const *data, TokenType const *types,
-	size_t typesCount, void (*overload)(Token const *, int))
+static void testGeneric(wchar_t const *data,
+	Token const *tokens, size_t tokensCount)
 {
 	Tokenizer *tokenizer;
 	GenericTest gt;
 
 	gt.index = 0;
-	gt.types = types;
-	gt.typesCount = typesCount;
-	gt.overload = overload;
+	gt.tokens = tokens;
+	gt.tokensCount = tokensCount;
 
 	tokenizer = QxJsonTokenizer_new();
 	QX_ASSERT(tokenizer != NULL);
 	QxJsonTokenizer_setHandler(tokenizer, testGenericCallback, &gt);
 	QX_ASSERT(QxJsonTokenizer_write(tokenizer, data, wcslen(data)) == 0);
 	QX_ASSERT(QxJsonTokenizer_flush(tokenizer) == 0);
+	QX_ASSERT(gt.index == tokensCount);
 	QxJsonTokenizer_delete(tokenizer);
 	return;
 }
 
 static void testArray(void)
 {
-	TokenType const types[] = {
-		QxJsonTokenBeginArray,
-		QxJsonTokenValuesSeparator,
-		QxJsonTokenEndArray
+	Token const tokens[] = {
+		{ QxJsonTokenBeginArray     , NULL, 0 },
+		{ QxJsonTokenValuesSeparator, NULL, 0 },
+		{ QxJsonTokenEndArray       , NULL, 0 }
 	};
-	testGeneric(L"[ , ]", types, ARRAY_SIZE(types), NULL);
+	testGeneric(L"[ , ]", tokens, ARRAY_SIZE(tokens));
 	return;
 }
 
 static void testObject(void)
 {
-	TokenType const types[] = {
-		QxJsonTokenBeginObject,
-		QxJsonTokenNameValueSeparator,
-		QxJsonTokenValuesSeparator,
-		QxJsonTokenNameValueSeparator,
-		QxJsonTokenEndObject,
+	Token const tokens[] = {
+		{ QxJsonTokenBeginObject       , NULL, 0 },
+		{ QxJsonTokenNameValueSeparator, NULL, 0 },
+		{ QxJsonTokenValuesSeparator   , NULL, 0 },
+		{ QxJsonTokenNameValueSeparator, NULL, 0 },
+		{ QxJsonTokenEndObject         , NULL, 0 }
 	};
-	testGeneric(L"{ : , : }", types, ARRAY_SIZE(types), NULL);
-	return;
-}
-
-static void testAtom(wchar_t const *text, TokenType expectedType)
-{
-	testGeneric(text, &expectedType, 1, NULL);
+	testGeneric(L"{ : , : }", tokens, ARRAY_SIZE(tokens));
 	return;
 }
 
 static void testNull(void)
 {
-	testAtom(L"null", QxJsonTokenNull);
+	Token const token = { QxJsonTokenNull, NULL, 0 };
+	testGeneric(L"null", &token, 1);
 	return;
 }
 
 static void testTrue(void)
 {
-	testAtom(L"true", QxJsonTokenTrue);
+	Token const token = { QxJsonTokenTrue, NULL, 0 };
+	testGeneric(L"true", &token, 1);
 	return;
 }
 
 static void testFalse(void)
 {
-	testAtom(L"false", QxJsonTokenFalse);
+	Token const token = { QxJsonTokenFalse, NULL, 0 };
+	testGeneric(L"false", &token, 1);
 	return;
-}
-
-static int testStringHandler(Token const *token, void *userData)
-{
-	int *const index = (int *)userData;
-
-	QX_ASSERT(token->type == QxJsonTokenString);
-
-	switch (*index)
-	{
-	case 0:
-		QX_ASSERT(token->size == 0);
-		break;
-
-	case 1:
-		QX_ASSERT(token->size == 6);
-		QX_ASSERT(memcmp(token->data, L"QxJson", 6 * sizeof(wchar_t)) == 0);
-		break;
-
-	default:
-		QX_ASSERT(0 /* Unexpected token */);
-		break;
-	}
-
-	++*index;
-	return 0;
 }
 
 static void testString(void)
 {
-	Tokenizer *tokenizer = QxJsonTokenizer_new();
-	int index = 0;
-
-	QX_ASSERT(tokenizer != NULL);
-	QxJsonTokenizer_setHandler(tokenizer, testStringHandler, &index);
-
-	QX_ASSERT(QxJsonTokenizer_write(tokenizer, L"\"\"", 2) == 0);
-	QX_ASSERT(QxJsonTokenizer_flush(tokenizer) == 0);
-
-	QX_ASSERT(QxJsonTokenizer_write(tokenizer, L"\"QxJson\"", 8) == 0);
-	QX_ASSERT(QxJsonTokenizer_flush(tokenizer) == 0);
-
-	QxJsonTokenizer_delete(tokenizer);
+	Token const tokens[] = {
+		{ QxJsonTokenString, L""      , 0 },
+		{ QxJsonTokenString, L"QxJson", 6 }
+	};
+	testGeneric(L"\"\"" L"\"QxJson\"", tokens, ARRAY_SIZE(tokens));
 	return;
 }
 
