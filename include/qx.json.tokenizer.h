@@ -40,7 +40,7 @@ typedef enum QxJsonTokenType QxJsonTokenType;
 struct QxJsonToken
 {
 	QxJsonTokenType type;
-	wchar_t *data;
+	wchar_t const *data;
 	size_t size;
 };
 typedef struct QxJsonToken QxJsonToken;

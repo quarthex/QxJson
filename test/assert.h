@@ -6,6 +6,7 @@
 #ifndef _H_QX_ASSERT
 #define _H_QX_ASSERT
 
+#include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -19,6 +20,7 @@
 #define QX_ASSERT(condition) do { \
 	if (!(condition)) { \
 		_QX_ERROR("Assertion failed: `" #condition "`\n"); \
+		raise(SIGTRAP); \
 		exit(EXIT_FAILURE); \
 	} \
 } while(0)

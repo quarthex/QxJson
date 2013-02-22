@@ -17,18 +17,20 @@ typedef QxJsonTokenType TokenType;
 
 /* Private functions */
 static int Tokenizer_grow(Tokenizer *self);
-static int Tokenizer_raiseAtom(Tokenizer *self, TokenType type);
+static int Tokenizer_raiseToken(Tokenizer *self, TokenType type);
 static int Tokenizer_flushFail(Tokenizer *self);
 
 typedef struct Callbacks Callbacks;
 struct Callbacks
 {
-	int (*const write)(Tokenizer *self);
+	int (*const write)(Tokenizer *self, wchar_t character);
 	int (*const flush)(Tokenizer *self);
 };
 
 static Callbacks const Tokenizer_callbacksDefault;
-static Callbacks const Tokenizer_callbacksAtom;
+static Callbacks const Tokenizer_callbacksFalse;
+static Callbacks const Tokenizer_callbacksNull;
+static Callbacks const Tokenizer_callbacksTrue;
 static Callbacks const Tokenizer_callbacksString;
 static Callbacks const Tokenizer_callbacksStringEscape;
 
@@ -36,18 +38,17 @@ static Callbacks const Tokenizer_callbacksStringEscape;
 
 struct QxJsonTokenizer
 {
-	/* Raised token */
-	Token token;
 	/* State design pattern */
 	Callbacks const *callbacks;
-	/* Allocated space in token.data */
-	size_t alloc;
-	/* Data to be processed */
-	wchar_t const *data;
-	wchar_t const *dataEnd;
+
+	/* Buffer */
+	wchar_t *bufferData;
+	size_t bufferSize;
+	size_t bufferAlloc;
+
 	/* Handler */
-	int(*callback)(Token const *, void *);
-	void *userData;
+	int(*handlerCallback)(Token const *, void *);
+	void *handlerUserData;
 };
 
 Tokenizer *QxJsonTokenizer_new(void)
@@ -65,32 +66,29 @@ Tokenizer *QxJsonTokenizer_new(void)
 			return NULL;
 		}
 
-		instance->alloc = 512;
+		instance->bufferAlloc = 512;
 		instance->callbacks = &Tokenizer_callbacksDefault;
 	}
 
 	return instance;
 }
 
-void QxJsonTokenizer_setHandler(QxJsonTokenizer *self,
+void QxJsonTokenizer_setHandler(Tokenizer *self,
 	int (*callback)(Token const *, void *), void *userData)
 {
 	assert(self != NULL);
 	assert(callback != NULL);
-	self->callback = callback;
-	self->userData = userData;
+	self->handlerCallback = callback;
+	self->handlerUserData = userData;
 	return;
 }
 
 void QxJsonTokenizer_delete(Tokenizer *self)
 {
 	assert(self != NULL);
-
-	if (self->alloc)
-	{
-		free(self->token.data);
-	}
-
+	assert(self->bufferAlloc > 0);
+	assert(self->bufferData != NULL);
+	free(self->bufferData);
 	free(self);
 	return;
 }
@@ -98,18 +96,16 @@ void QxJsonTokenizer_delete(Tokenizer *self)
 int QxJsonTokenizer_write(Tokenizer *self, wchar_t const *data, size_t size)
 {
 	int error = 0;
+	wchar_t const *const end = data + size;
 
 	assert(self != NULL);
 	assert(data != NULL);
 
-	self->data = data;
-	self->dataEnd = data + size;
-
-	while (!error && (self->data != self->dataEnd))
+	for (; !error && (data != end); ++data)
 	{
 		assert(self->callbacks != NULL);
 		assert(self->callbacks->write != NULL);
-		error = self->callbacks->write(self);
+		error = self->callbacks->write(self, *data);
 	}
 
 	return error;
@@ -125,31 +121,33 @@ int QxJsonTokenizer_flush(Tokenizer *self)
 
 /* Private implementations */
 
-static int Tokenizer_grow(QxJsonTokenizer *self)
+static int Tokenizer_grow(Tokenizer *self)
 {
 	wchar_t *dataTmp;
-	self->alloc += 512;
-	dataTmp =	(wchar_t *)realloc(self->token.data, self->alloc * sizeof(wchar_t));
+	self->bufferAlloc += 512;
+	dataTmp =	(wchar_t *)realloc(self->bufferData,
+		self->bufferAlloc * sizeof(wchar_t));
 
 	if (!dataTmp)
 	{
 		/* Memory allocation failed */
-		self->alloc -= 512;
+		self->bufferAlloc -= 512;
 		return -1;
 	}
 
-	self->token.data = dataTmp;
+	self->bufferData = dataTmp;
 	return 0;
 }
 
-static int Tokenizer_raiseAtom(Tokenizer *self, TokenType type)
+static int Tokenizer_raiseToken(Tokenizer *self, TokenType type)
 {
-	assert(self->token.size == 0);
+	Token token;
 
-	self->token.type = type;
-	self->token.data[0] = L'\0';
+	token.type = type;
+	token.size = self->bufferSize;
+	token.data = (token.size > 0) ? self->bufferData : NULL;
 
-	return self->callback(&self->token, self->userData);
+	return self->handlerCallback(&token, self->handlerUserData);
 }
 
 static int Tokenizer_flushFail(Tokenizer *self)
@@ -159,75 +157,54 @@ static int Tokenizer_flushFail(Tokenizer *self)
 	return -1;
 }
 
-static int Tokenizer_writeDefault(Tokenizer *self)
+static int Tokenizer_writeDefault(Tokenizer *self, wchar_t character)
 {
 	assert(self != NULL);
-	assert(self->data != self->dataEnd);
 
-	self->token.size = 0;
+	self->bufferSize = 0;
 
-	switch (*self->data)
+	switch (character)
 	{
 	case L'\t':
 	case L'\n':
 	case L'\r':
 	case L' ':
 		/* Ignored white space */
-		++self->data;
 		return 0;
 
 	case L'"':
-		++self->data;
 		self->callbacks = &Tokenizer_callbacksString;
 		return 0;
 
 	case L',':
-		++self->data;
-		return Tokenizer_raiseAtom(self, QxJsonTokenValuesSeparator);
+		return Tokenizer_raiseToken(self, QxJsonTokenValuesSeparator);
 
 	case L':':
-		++self->data;
-		return Tokenizer_raiseAtom(self, QxJsonTokenNameValueSeparator);
+		return Tokenizer_raiseToken(self, QxJsonTokenNameValueSeparator);
 
 	case L'[':
-		++self->data;
-		return Tokenizer_raiseAtom(self, QxJsonTokenBeginArray);
+		return Tokenizer_raiseToken(self, QxJsonTokenBeginArray);
 
 	case L']':
-		++self->data;
-		return Tokenizer_raiseAtom(self, QxJsonTokenEndArray);
+		return Tokenizer_raiseToken(self, QxJsonTokenEndArray);
 
 	case L'f':
-		++self->data;
-		self->token.type = QxJsonTokenFalse;
-		memcpy(self->token.data, L"esla", 4 * sizeof(wchar_t));
-		self->token.size = 4;
-		self->callbacks = &Tokenizer_callbacksAtom;
+		self->callbacks = &Tokenizer_callbacksFalse;
 		return 0;
 
 	case L'n':
-		++self->data;
-		self->token.type = QxJsonTokenNull;
-		memcpy(self->token.data, L"llu", 3 * sizeof(wchar_t));
-		self->token.size = 3;
-		self->callbacks = &Tokenizer_callbacksAtom;
+		self->callbacks = &Tokenizer_callbacksNull;
 		return 0;
 
 	case L't':
-		++self->data;
-		self->token.type = QxJsonTokenTrue;
-		memcpy(self->token.data, L"eur", 3 * sizeof(wchar_t));
-		self->token.size = 3;
-		self->callbacks = &Tokenizer_callbacksAtom;
+		self->callbacks = &Tokenizer_callbacksTrue;
 		return 0;
 
 	case L'{':
-		++self->data;
-		return Tokenizer_raiseAtom(self, QxJsonTokenBeginObject);
+		return Tokenizer_raiseToken(self, QxJsonTokenBeginObject);
 
 	case L'}':
-		++self->data;
-		return Tokenizer_raiseAtom(self, QxJsonTokenEndObject);
+		return Tokenizer_raiseToken(self, QxJsonTokenEndObject);
 	}
 
 	/* Unexpected character */
@@ -246,71 +223,93 @@ static Callbacks const Tokenizer_callbacksDefault = {
 	Tokenizer_flushDefault
 };
 
-static int Tokenizer_writeAtom(Tokenizer *self)
+typedef struct Atom Atom;
+struct Atom
 {
-	assert(self != NULL);
+	wchar_t const *const atom;
+	size_t atomSize;
+	TokenType type;
+};
 
-	while (self->token.size && (self->data != self->dataEnd))
+static int Tokenizer_writeAtom(Tokenizer *self, wchar_t character, Atom const *atom)
+{
+	if (character != atom->atom[self->bufferSize])
 	{
-		--self->token.size;
-
-		if (*self->data != self->token.data[self->token.size])
-		{
-			return -1;
-		}
-
-		++self->data;
+		return -1;
 	}
 
-	if (self->token.size)
+	++self->bufferSize;
+
+	if (self->bufferSize == atom->atomSize)
 	{
-		/* Atom parsing not yet finished */
-		return 0;
+		self->callbacks = &Tokenizer_callbacksDefault;
+		self->bufferSize = 0;
+		return Tokenizer_raiseToken(self, atom->type);
 	}
 
-	self->callbacks = &Tokenizer_callbacksDefault;
-	assert(self->callback);
-	return self->callback(&self->token, self->userData);
+	/* Parsing not yet finished */
+	return 0;
 }
 
-static Callbacks const Tokenizer_callbacksAtom = {
-	Tokenizer_writeAtom,
+static int Tokenizer_writeFalse(Tokenizer *self, wchar_t character)
+{
+	static Atom const atom = { L"alse", 4, QxJsonTokenFalse };
+	return Tokenizer_writeAtom(self, character, &atom);
+}
+
+static Callbacks const Tokenizer_callbacksFalse = {
+	Tokenizer_writeFalse,
 	Tokenizer_flushFail
 };
 
-static int Tokenizer_writeString(Tokenizer *self)
+static int Tokenizer_writeNull(Tokenizer *self, wchar_t character)
+{
+	static Atom const atom = { L"ull", 3, QxJsonTokenNull };
+	return Tokenizer_writeAtom(self, character, &atom);
+}
+
+static Callbacks const Tokenizer_callbacksNull = {
+	Tokenizer_writeNull,
+	Tokenizer_flushFail
+};
+
+static int Tokenizer_writeTrue(Tokenizer *self, wchar_t character)
+{
+	static Atom const atom = { L"rue", 3, QxJsonTokenTrue };
+	return Tokenizer_writeAtom(self, character, &atom);
+}
+
+static Callbacks const Tokenizer_callbacksTrue = {
+	Tokenizer_writeTrue,
+	Tokenizer_flushFail
+};
+
+static int Tokenizer_writeString(Tokenizer *self, wchar_t character)
 {
 	assert(self != NULL);
 
-	for (; self->data != self->dataEnd; ++self->data, ++self->token.size)
+	switch (character)
 	{
-		if (*self->data == L'"') /* End of the string */
-		{
-			++self->data;
-			self->callbacks = &Tokenizer_callbacksDefault;
-			return self->callback(&self->token, self->userData);
-		}
+	case L'"': /* End of the string */
+		self->callbacks = &Tokenizer_callbacksDefault;
+		return Tokenizer_raiseToken(self, QxJsonTokenString);
 
-		if (*self->data == L'\\') /* Escaped sequence */
-		{
-			++self->data;
-			self->callbacks = &Tokenizer_callbacksStringEscape;
-			return 0;
-		}
-
-		if (self->token.size == self->alloc)
-		{
-			if (Tokenizer_grow(self) != 0)
-			{
-				/* Failed to allocate more memory */
-				return -1;
-			}
-		}
-
-		self->token.data[self->token.size] = *self->data;
+	case L'\\': /* Escaped sequence */
+		self->callbacks = &Tokenizer_callbacksStringEscape;
+		return 0;
 	}
 
-	/* String parsing not yet finished */
+	if (self->bufferSize == self->bufferAlloc)
+	{
+		if (Tokenizer_grow(self) != 0)
+		{
+			/* Failed to allocate more memory */
+			return -1;
+		}
+	}
+
+	self->bufferData[self->bufferSize] = character;
+	++self->bufferSize;
 	return 0;
 }
 
@@ -319,47 +318,34 @@ static Callbacks const Tokenizer_callbacksString = {
 	Tokenizer_flushFail
 };
 
-static int Tokenizer_writeStringEscape(Tokenizer *self)
+static int Tokenizer_writeStringEscape(Tokenizer *self, wchar_t character)
 {
+	wchar_t const *const translation =
+		L"\"" L"\""
+		L"/"  L"/"
+		L"\\" L"\\"
+		L"b"  L"\b"
+		L"f"  L"\f"
+		L"r"  L"\r"
+		L"n"  L"\n"
+		L"t"  L"\t";
+	wchar_t const *offset = translation;
+
 	assert(self != NULL);
 
-	switch (*self->data)
+	for (; *offset; offset += 2)
 	{
-	case L'"':
-	case L'/':
-	case L'\\':
-		self->token.data[self->token.size] = *self->data;
-		break;
-
-	case L'b':
-		self->token.data[self->token.size] = L'\b';
-		break;
-
-	case L'f':
-		self->token.data[self->token.size] = L'\f';
-		break;
-
-	case L'n':
-		self->token.data[self->token.size] = L'\n';
-		break;
-
-	case L'r':
-		self->token.data[self->token.size] = L'\r';
-		break;
-
-	case L't':
-		self->token.data[self->token.size] = L'\t';
-		break;
-
-	default:
-		/* Unexpected sequence */
-		return -1;
+		if (character == *offset)
+		{
+			self->bufferData[self->bufferSize] = *(offset + 1);
+			++self->bufferSize;
+			self->callbacks = &Tokenizer_callbacksString;
+			return 0;
+		}
 	}
 
-	++self->data;
-	++self->token.size;
-	self->callbacks = &Tokenizer_callbacksString;
-	return 0;
+	/* Unexpected sequence */
+	return -1;
 }
 
 static Callbacks const Tokenizer_callbacksStringEscape = {
