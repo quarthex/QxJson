@@ -128,6 +128,15 @@ static void testString(void)
 	return;
 }
 
+static void testNumber(void)
+{
+	Token const tokens[] = {
+		{ QxJsonTokenNumber, L"3.1415E-6", 9 }
+	};
+	testGeneric(L"3.1415E-6 ", tokens, ARRAY_SIZE(tokens));
+	return;
+}
+
 int main(void)
 {
 	testArray();
@@ -136,5 +145,6 @@ int main(void)
 	testTrue();
 	testFalse();
 	testString();
+	testNumber();
 	return EXIT_SUCCESS;
 }

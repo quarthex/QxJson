@@ -16,7 +16,7 @@ typedef QxJsonToken     Token;
 typedef QxJsonTokenType TokenType;
 
 /* Private functions */
-static int Tokenizer_grow(Tokenizer *self);
+static int Tokenizer_addToBuffer(Tokenizer *self, wchar_t character);
 static int Tokenizer_raiseToken(Tokenizer *self, TokenType type);
 static int Tokenizer_flushFail(Tokenizer *self);
 
@@ -33,6 +33,14 @@ static Callbacks const Tokenizer_callbacksNull;
 static Callbacks const Tokenizer_callbacksTrue;
 static Callbacks const Tokenizer_callbacksString;
 static Callbacks const Tokenizer_callbacksStringEscape;
+static Callbacks const Tokenizer_callbacksNumberMinus;
+static Callbacks const Tokenizer_callbacksNumberZero;
+static Callbacks const Tokenizer_callbacksNumberInterger;
+static Callbacks const Tokenizer_callbacksNumberDot;
+static Callbacks const Tokenizer_callbacksNumberFrac;
+static Callbacks const Tokenizer_callbacksNumberExponent;
+static Callbacks const Tokenizer_callbacksNumberExponentSign;
+static Callbacks const Tokenizer_callbacksNumberExponentSignInteger;
 
 /* Public implementations */
 
@@ -58,15 +66,6 @@ Tokenizer *QxJsonTokenizer_new(void)
 	if (instance)
 	{
 		memset(instance, 0, sizeof(Tokenizer));
-
-		if (Tokenizer_grow(instance) != 0)
-		{
-			/* memory allocation failed */
-			free(instance);
-			return NULL;
-		}
-
-		instance->bufferAlloc = 512;
 		instance->callbacks = &Tokenizer_callbacksDefault;
 	}
 
@@ -86,9 +85,13 @@ void QxJsonTokenizer_setHandler(Tokenizer *self,
 void QxJsonTokenizer_delete(Tokenizer *self)
 {
 	assert(self != NULL);
-	assert(self->bufferAlloc > 0);
-	assert(self->bufferData != NULL);
-	free(self->bufferData);
+
+	if (self->bufferData)
+	{
+		assert(self->bufferAlloc > 0);
+		free(self->bufferData);
+	}
+
 	free(self);
 	return;
 }
@@ -121,21 +124,28 @@ int QxJsonTokenizer_flush(Tokenizer *self)
 
 /* Private implementations */
 
-static int Tokenizer_grow(Tokenizer *self)
+static int Tokenizer_addToBuffer(Tokenizer *self, wchar_t character)
 {
 	wchar_t *dataTmp;
-	self->bufferAlloc += 512;
-	dataTmp =	(wchar_t *)realloc(self->bufferData,
-		self->bufferAlloc * sizeof(wchar_t));
 
-	if (!dataTmp)
+	if (self->bufferAlloc == self->bufferSize)
 	{
-		/* Memory allocation failed */
-		self->bufferAlloc -= 512;
-		return -1;
+		self->bufferAlloc += 512;
+		dataTmp = (wchar_t *)realloc(self->bufferData,
+			self->bufferAlloc * sizeof(wchar_t));
+
+		if (!dataTmp)
+		{
+			/* Memory allocation failed */
+			self->bufferAlloc -= 512;
+			return -1;
+		}
+
+		self->bufferData = dataTmp;
 	}
 
-	self->bufferData = dataTmp;
+	self->bufferData[self->bufferSize] = character;
+	++self->bufferSize;
 	return 0;
 }
 
@@ -147,6 +157,7 @@ static int Tokenizer_raiseToken(Tokenizer *self, TokenType type)
 	token.size = self->bufferSize;
 	token.data = (token.size > 0) ? self->bufferData : NULL;
 
+	self->callbacks = &Tokenizer_callbacksDefault;
 	return self->handlerCallback(&token, self->handlerUserData);
 }
 
@@ -205,6 +216,13 @@ static int Tokenizer_writeDefault(Tokenizer *self, wchar_t character)
 
 	case L'}':
 		return Tokenizer_raiseToken(self, QxJsonTokenEndObject);
+	}
+
+	if (character >= L'1' && character <= L'9')
+	{
+		Tokenizer_addToBuffer(self, character);
+		self->callbacks = &Tokenizer_callbacksNumberInterger;
+		return 0;
 	}
 
 	/* Unexpected character */
@@ -299,18 +317,7 @@ static int Tokenizer_writeString(Tokenizer *self, wchar_t character)
 		return 0;
 	}
 
-	if (self->bufferSize == self->bufferAlloc)
-	{
-		if (Tokenizer_grow(self) != 0)
-		{
-			/* Failed to allocate more memory */
-			return -1;
-		}
-	}
-
-	self->bufferData[self->bufferSize] = character;
-	++self->bufferSize;
-	return 0;
+	return Tokenizer_addToBuffer(self, character);
 }
 
 static Callbacks const Tokenizer_callbacksString = {
@@ -351,4 +358,228 @@ static int Tokenizer_writeStringEscape(Tokenizer *self, wchar_t character)
 static Callbacks const Tokenizer_callbacksStringEscape = {
 	Tokenizer_writeStringEscape,
 	Tokenizer_flushFail
+};
+
+static int Tokenizer_flushNumber(Tokenizer *self)
+{
+	return Tokenizer_raiseToken(self, QxJsonTokenNumber);
+}
+
+static int Tokenizer_writeNumberMinus(Tokenizer *self, wchar_t character)
+{
+	switch (character)
+	{
+	case L'0':
+		self->callbacks = &Tokenizer_callbacksNumberZero;
+		break;
+
+	default:
+		if (character >= L'1' && character <= L'9')
+		{
+			self->callbacks = &Tokenizer_callbacksNumberInterger;
+		}
+		else
+		{
+			/* Unexpected character */
+			return -1;
+		}
+	}
+
+	return Tokenizer_addToBuffer(self, L'O');
+}
+
+static Callbacks const Tokenizer_callbacksNumberMinus = {
+	Tokenizer_writeNumberMinus,
+	Tokenizer_flushFail
+};
+
+static int Tokenizer_writeNumberZero(Tokenizer *self, wchar_t character)
+{
+	switch (character)
+	{
+	case L'.':
+		self->callbacks = &Tokenizer_callbacksNumberDot;
+		break;
+
+	case L'e':
+	case L'E':
+		self->callbacks = &Tokenizer_callbacksNumberExponent;
+		break;
+
+	default:
+		/* Unexpected character */
+		return -1;
+	}
+
+	return Tokenizer_addToBuffer(self, character);
+}
+
+static Callbacks const Tokenizer_callbacksNumberZero = {
+	Tokenizer_writeNumberZero,
+	Tokenizer_flushNumber
+};
+
+static int Tokenizer_writeNumberInteger(Tokenizer *self, wchar_t character)
+{
+	int error;
+
+	switch (character)
+	{
+	case L'.':
+		self->callbacks = &Tokenizer_callbacksNumberDot;
+		break;
+
+	default:
+		if (character < L'0' || character > L'9')
+		{
+			/* End of the number */
+			error = Tokenizer_flushNumber(self);
+
+			if (error)
+			{
+				return error;
+			}
+
+			assert(self->callbacks->write == &Tokenizer_writeDefault);
+			return Tokenizer_writeDefault(self, character);
+		}
+	}
+
+	return Tokenizer_addToBuffer(self, L'.');
+}
+
+static Callbacks const Tokenizer_callbacksNumberInterger = {
+	Tokenizer_writeNumberInteger,
+	Tokenizer_flushNumber
+};
+
+static int Tokenizer_writeNumberDot(Tokenizer *self, wchar_t character)
+{
+	if (character >= L'0' && character <= L'9')
+	{
+		self->callbacks = &Tokenizer_callbacksNumberFrac;
+		return Tokenizer_addToBuffer(self, character);
+	}
+
+	/* Unexpected character */
+	return -1;
+}
+
+static Callbacks const Tokenizer_callbacksNumberDot = {
+	Tokenizer_writeNumberDot,
+	Tokenizer_flushFail
+};
+
+static int Tokenizer_writeNumberFrac(Tokenizer *self, wchar_t character)
+{
+	int error;
+
+	switch (character)
+	{
+	case L'e':
+	case L'E':
+		self->callbacks = &Tokenizer_callbacksNumberExponent;
+		break;
+
+	default:
+		if (character < L'0' || character > L'9')
+		{
+			/* End of number */
+			error = Tokenizer_raiseToken(self, QxJsonTokenNumber);
+
+			if (error)
+			{
+				return error;
+			}
+
+			assert(self->callbacks == &Tokenizer_callbacksDefault);
+			return Tokenizer_writeDefault(self, character);
+		}
+	}
+
+	return Tokenizer_addToBuffer(self, character);
+}
+
+static Callbacks const Tokenizer_callbacksNumberFrac = {
+	Tokenizer_writeNumberFrac,
+	Tokenizer_flushNumber
+};
+
+static int Tokenizer_writeNumberExponent(Tokenizer *self, wchar_t character)
+{
+	int error;
+
+	switch (character)
+	{
+	case L'-':
+	case L'+':
+		self->callbacks = &Tokenizer_callbacksNumberExponentSign;
+		break;
+
+	default:
+		if (character < L'0' || character > L'9')
+		{
+			/* End of the number */
+
+			error = Tokenizer_raiseToken(self, QxJsonTokenNumber);
+
+			if (error)
+			{
+				return error;
+			}
+
+			assert(self->callbacks = &Tokenizer_callbacksDefault);
+			return Tokenizer_writeDefault(self, character);
+		}
+	}
+
+	return Tokenizer_addToBuffer(self, character);
+}
+
+static Callbacks const Tokenizer_callbacksNumberExponent = {
+	Tokenizer_writeNumberExponent,
+	Tokenizer_flushNumber
+};
+
+static int Tokenizer_writeNumberExponentSign(Tokenizer *self, wchar_t character)
+{
+	if (character >= L'0' && character <= L'9')
+	{
+		self->callbacks = &Tokenizer_callbacksNumberExponentSignInteger;
+		return Tokenizer_addToBuffer(self, character);
+	}
+
+	/* Unexpected character */
+	return -1;
+}
+
+static Callbacks const Tokenizer_callbacksNumberExponentSign = {
+	Tokenizer_writeNumberExponentSign,
+	Tokenizer_flushNumber
+};
+
+static int Tokenizer_writeNumberExponentSignInteger(Tokenizer *self, wchar_t character)
+{
+	int error;
+
+	if (character >= L'0' && character <= L'9')
+	{
+		return Tokenizer_addToBuffer(self, character);
+	}
+
+	/* End of the number */
+
+	error = Tokenizer_raiseToken(self, QxJsonTokenNumber);
+
+	if (error)
+	{
+		return error;
+	}
+
+	return Tokenizer_writeDefault(self, character);
+}
+
+static Callbacks const Tokenizer_callbacksNumberExponentSignInteger = {
+	Tokenizer_writeNumberExponentSignInteger,
+	Tokenizer_flushNumber
 };
