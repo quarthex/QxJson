@@ -4,11 +4,12 @@
  * @author Romain DEOUX
  */
 
+#include <stdlib.h>
 #include <string.h>
 
 #include <qx.json.string.h>
 
-#include "assert.h"
+#include "expect.h"
 
 int main(void)
 {
@@ -16,14 +17,14 @@ int main(void)
 	QxJsonValue *value;
 
 	value = qxJsonStringNew(NULL, 5);
-	QX_ASSERT(value == NULL);
+	expect_null(value);
 
 	value = qxJsonStringNew(L"Hello", 5);
-	QX_ASSERT(QX_JSON_IS_STRING(value));
+	expect_ok(QX_JSON_IS_STRING(value));
 	string = QX_JSON_STRING(value);
-	QX_ASSERT(string != NULL);
-	QX_ASSERT(qxJsonStringSize(string) == 5);
-	QX_ASSERT(memcmp(qxJsonStringData(string), L"Hello", 5 * sizeof(wchar_t)) == 0);
+	expect_not_null(string);
+	expect_int_equal(qxJsonStringSize(string), 5);
+	expect_zero(memcmp(qxJsonStringData(string), L"Hello", 5 * sizeof(wchar_t)));
 
 	qxJsonValueUnref(value);
 	return EXIT_SUCCESS;

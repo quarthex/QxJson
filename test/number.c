@@ -4,11 +4,12 @@
  * @author Romain DEOUX
  */
 
+#include <stdlib.h>
 #include <string.h>
 
 #include <qx.json.number.h>
 
-#include "assert.h"
+#include "expect.h"
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
 
@@ -32,16 +33,16 @@ int main(void)
 	for (; index != ARRAY_SIZE(numbers); ++index)
 	{
 		value = qxJsonNumberNew(numbers[index]);
-		QX_ASSERT(value != NULL);
-		QX_ASSERT(QX_JSON_IS_NUMBER(value));
+		expect_not_null(value);
+		expect_ok(QX_JSON_IS_NUMBER(value));
 		number = QX_JSON_NUMBER(value);
-		QX_ASSERT(number != NULL);
-		QX_ASSERT(compareNumbers(qxJsonNumberValue(number), numbers[index]) == 0);
+		expect_not_null(number);
+		expect_zero(compareNumbers(qxJsonNumberValue(number), numbers[index]));
 		qxJsonValueUnref(value);
 	}
 
 	value = qxJsonNumberNew(-0.);
-	QX_ASSERT(compareNumbers(qxJsonNumberValue(QX_JSON_NUMBER(value)), 0.) != 0);
+	expect_not_zero(compareNumbers(qxJsonNumberValue(QX_JSON_NUMBER(value)), 0.));
 	qxJsonValueUnref(value);
 
 	return EXIT_SUCCESS;

@@ -4,15 +4,17 @@
  * @author Romain DEOUX
  */
 
+#include <stdlib.h>
+
 #include <qx.json.null.h>
 
-#include "assert.h"
+#include "expect.h"
 
 int main(void)
 {
 	QxJsonValue *const value = qxJsonNullNew();
-	QX_ASSERT(value != NULL);
-	QX_ASSERT(QX_JSON_IS_NULL(value));
+	expect_not_null(value);
+	expect_ok(QX_JSON_IS_NULL(value));
 	qxJsonValueUnref(value);
 	return EXIT_SUCCESS;
 }
