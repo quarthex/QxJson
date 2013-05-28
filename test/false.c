@@ -1,5 +1,5 @@
 /**
- * @file qx.test.false.c
+ * @file false.c
  * @brief Testing source file of the QxJsonFalse class.
  * @author Romain DEOUX
  */

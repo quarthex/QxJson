@@ -1,5 +1,5 @@
 /**
- * @file qx.assert.h
+ * @file expect.h
  * @brief Header file used for the tests
  * @author Romain DEOUX
  */

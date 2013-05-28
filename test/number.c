@@ -1,5 +1,5 @@
 /**
- * @file qx.test.number.c
+ * @file number.c
  * @brief Testing source file of the QxJsonNumber class.
  * @author Romain DEOUX
  */

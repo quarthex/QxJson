@@ -1,5 +1,5 @@
 /**
- * @file qx.test.tokenizer.c
+ * @file tokenizer.c
  * @brief Testing source file of the QxJsonTokenizer class.
  * @author Romain DEOUX
  */

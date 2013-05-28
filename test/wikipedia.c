@@ -1,3 +1,9 @@
+/**
+ * @file wikipedia.c
+ * @brief Testing use case using the Wikipedia JSON example.
+ * @author Romain DEOUX
+ */
+
 #include <fcntl.h>
 #include <stdlib.h>
 #include <sys/stat.h>

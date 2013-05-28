@@ -1,5 +1,5 @@
 /**
- * @file qx.test.object.c
+ * @file object.c
  * @brief Testing source file of the QxJsonObject class.
  * @author Romain DEOUX
  */

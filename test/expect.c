@@ -1,3 +1,8 @@
+/**
+ * @file expect.c
+ * @brief Source file used for the tests
+ * @author Romain DEOUX
+ */
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -39,7 +44,16 @@ void __expect_int_not_equal(char const *file, int line,
 void __expect_wstr_equal(char const *file, int line,
 	char const *actualName, wchar_t const *expected, wchar_t const *actual)
 {
-	__expect(file, line, wcscmp(expected, actual) == 0,
+	int ok;
+
+	if (expected && actual)
+		ok = wcscmp(expected, actual) == 0; /* Both are not nul */
+	else if (expected || actual)
+		ok = 0; /* One of them is nul */
+	else
+		ok = 1; /* Both are nuls */
+
+	__expect(file, line, ok,
 		"%s expected to be equal to \"%ls\" but is actually equal to \"%ls\"",
 		actualName, expected, actual);
 }

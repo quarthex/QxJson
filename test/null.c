@@ -1,5 +1,5 @@
 /**
- * @file qx.test.null.c
+ * @file null.c
  * @brief Testing source file of the QxJsonNull class.
  * @author Romain DEOUX
  */

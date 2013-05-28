@@ -168,6 +168,10 @@ static int Tokenizer_wcharToBuffer(QxJsonTokenizer *self, wchar_t character)
 			return -1;
 		}
 
+#ifndef NDEBUG
+		/* Be kind with Valgrind */
+		memset(dataTmp + (self->bufferAlloc - 512) * sizeof(wchar_t), 0, 512);
+#endif
 		self->bufferData = dataTmp;
 	}
 

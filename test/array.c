@@ -1,5 +1,5 @@
 /**
- * @file qx.test.array.c
+ * @file array.c
  * @brief Testing source file of the QxJsonArray class.
  * @author Romain DEOUX
  */

@@ -1,5 +1,5 @@
 /**
- * @file qx.json.value.private.h
+ * @file value.private.h
  * @brief Private header of the QxJsonValue class.
  * @author Romain DEOUX
  */
