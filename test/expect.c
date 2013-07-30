@@ -7,6 +7,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "expect.h"
 
@@ -39,6 +40,23 @@ void __expect_int_not_equal(char const *file, int line,
 {
 	__expect(file, line, expected != actual,
 			 "%s expected not to be equal to %d", actualName, expected);
+}
+
+void __expect_str_equal(char const *file, int line,
+	char const *actualName, char const *expected, char const *actual)
+{
+	int ok;
+
+	if (expected && actual)
+		ok = strcmp(expected, actual) == 0; /* Both are not nul */
+	else if (expected || actual)
+		ok = 0; /* One of them is nul */
+	else
+		ok = 1; /* Both are nuls */
+
+	__expect(file, line, ok,
+		"%s expected to be equal to \"%s\" but is actually equal to \"%s\"",
+		actualName, expected, actual);
 }
 
 void __expect_wstr_equal(char const *file, int line,

@@ -46,10 +46,20 @@ struct QxJsonToken
 typedef struct QxJsonToken QxJsonToken;
 
 /**
+ * @brief Interface of a tokens handler
+ */
+typedef struct QxJsonTokenizerHandler QxJsonTokenizerHandler;
+struct QxJsonTokenizerHandler
+{
+	int(*feed)(QxJsonTokenizerHandler *self, QxJsonToken const *token);
+};
+
+/**
  * @brief Create a new tokenizer.
+ * @param[int] handler The tokens handler.
  * @return A tokenizer on success. A null pointer otherwise.
  */
-QX_API QxJsonTokenizer *QxJsonTokenizer_new(void);
+QX_API QxJsonTokenizer *QxJsonTokenizer_new(QxJsonTokenizerHandler *handler);
 
 /**
  * @brief Delete a tokenizer.
@@ -58,21 +68,20 @@ QX_API QxJsonTokenizer *QxJsonTokenizer_new(void);
 QX_API void QxJsonTokenizer_delete(QxJsonTokenizer *self);
 
 /**
- * @brief Reset the stream to be tokenized.
- * @param     self The tokenizer.
- * @param[in] data The stream data.
- * @param[in] size The size of the stream.
- * @return 0 on success. -1 otherwise.
+ * @brief Feed new data to the tokenizer.
+ * @param[out] self The tokenizer instance.
+ * @param[in] data A buffer containing the new data.
+ * @param[in] size The amount of characters (not the bytes count).
+ * @return 0 on success.
  */
-QX_API int QxJsonTokenizer_resetStream(QxJsonTokenizer *self,
+QX_API int QxJsonTokenizer_feed(QxJsonTokenizer *self,
 	wchar_t const *data, size_t size);
 
 /**
- * @brief Retrieve the next token of the JSON stream.
- * @param self The tokenizer.
- * @param[out] token The next token of the stream.
- * @return 1 on success. 0 if there is no more token. An error code otherwise.
+ * @brief Notify the tokenizer about the end of the data stream.
+ * @param[out] self The tokenizer instance.
+ * @return 0 on success.
  */
-QX_API int QxJsonTokenizer_nextToken(QxJsonTokenizer *self, QxJsonToken *token);
+QX_API int QxJsonTokenizer_end(QxJsonTokenizer *self);
 
 #endif /* _H_QX_JSON_TOKENIZER */

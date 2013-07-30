@@ -34,6 +34,12 @@ void __expect_int_not_equal(char const *file, int line,
 	__expect(__FILE__, __LINE__, (pointer) != NULL, \
 	"" #pointer " expected not to be null")
 
+/* Strings */
+void __expect_str_equal(char const *file, int line,
+	char const *actualName, char const *expected, char const *actual);
+#define expect_str_equal(actual, expected) \
+	__expect_str_equal(__FILE__, __LINE__, #actual, (expected), (actual))
+
 /* Wide strings */
 #include <wchar.h>
 void __expect_wstr_equal(char const *file, int line,

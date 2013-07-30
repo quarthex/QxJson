@@ -12,27 +12,54 @@
 
 /* Private functions */
 #define IN_RANGE(value, min, max) (((value) >= (min)) && ((value) <= (max)))
-#define DIGIT(value)              IN_RANGE((value), L'0', L'9')
-#define DIGIT_1_9(value)          IN_RANGE((value), L'1', L'9')
+#define WITHIN_0_9(value)  IN_RANGE((value), L'0', L'9')
+#define WITHIN_1_9(value)  IN_RANGE((value), L'1', L'9')
+#define WITHIN_a_f(value)  IN_RANGE((value), L'a', L'f')
+#define WITHIN_A_F(value)  IN_RANGE((value), L'A', L'F')
 
-static int Tokenizer_streamAtEnd(QxJsonTokenizer *self);
+static int Tokenizer_feedDefault(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedString(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedStringEscape(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedStringUnicode(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedStringUnicode0(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedStringUnicode1(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedStringUnicode2(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedF(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedFa(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedFal(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedFals(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedN(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedNu(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedNul(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedT(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedTr(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedTru(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedNumberMinus(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedNumberZero(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedNumberInteger(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedNumberDot(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedNumberFrac(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedNumberExponent(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedNumberExponentSign(QxJsonTokenizer *self, wchar_t character);
+static int Tokenizer_feedNumberExponentInteger(QxJsonTokenizer *self, wchar_t character);
+
+static int Tokenizer_endDefault(QxJsonTokenizer *self);
+static int Tokenizer_endUnexpected(QxJsonTokenizer *self);
+static int Tokenizer_endNumber(QxJsonTokenizer *self);
+
 static int Tokenizer_wcharToBuffer(QxJsonTokenizer *self, wchar_t character);
-static int Tokenizer_cursorToBuffer(QxJsonTokenizer *self);
 
-static int Tokenizer_nextAtom(QxJsonTokenizer *self,
-	QxJsonToken *token, QxJsonTokenType type);
-static int Tokenizer_nextIdentifier(QxJsonTokenizer *self,
-	QxJsonToken *token, char const *identifier, QxJsonTokenType type);
-static int Tokenizer_nextString(QxJsonTokenizer *self, QxJsonToken *token);
-static int Tokenizer_nextNumber(QxJsonTokenizer *self, QxJsonToken *token);
+static int Tokenizer_raiseToken(QxJsonTokenizer *self, QxJsonTokenType type);
 
 /* Public implementations */
 
 struct QxJsonTokenizer
 {
-	/* Input stream */
-	wchar_t const *streamCursor;
-	wchar_t const *streamEnd;
+	QxJsonTokenizerHandler *handler;
+
+	/* Working variable */
+	int (*feed)(QxJsonTokenizer *self, wchar_t character);
+	int (*end)(QxJsonTokenizer *self);
 
 	/* Buffer */
 	wchar_t *bufferData;
@@ -40,13 +67,19 @@ struct QxJsonTokenizer
 	size_t bufferAlloc;
 };
 
-QxJsonTokenizer *QxJsonTokenizer_new(void)
+QxJsonTokenizer *QxJsonTokenizer_new(QxJsonTokenizerHandler *handler)
 {
-	QxJsonTokenizer *const instance = (QxJsonTokenizer *)malloc(sizeof(QxJsonTokenizer));
+	QxJsonTokenizer *instance;
+	assert(handler != NULL);
+
+	instance = (QxJsonTokenizer *)malloc(sizeof(QxJsonTokenizer));
 
 	if (instance)
 	{
 		memset(instance, 0, sizeof(QxJsonTokenizer));
+		instance->handler = handler;
+		instance->feed = &Tokenizer_feedDefault;
+		instance->end = &Tokenizer_endDefault;
 	}
 
 	return instance;
@@ -66,89 +99,534 @@ void QxJsonTokenizer_delete(QxJsonTokenizer *self)
 	return;
 }
 
-int QxJsonTokenizer_resetStream(QxJsonTokenizer *self,
+int QxJsonTokenizer_feed(QxJsonTokenizer *self,
 	wchar_t const *data, size_t size)
 {
-	assert(self != NULL);
-	assert(data != NULL);
+	int error = 0;
 
-	self->streamCursor = data;
-	self->streamEnd = data + size;
+	for (; size && !error; ++data, --size)
+		error = self->feed(self, *data);
 
-	return 0;
+	return error;
 }
 
-int QxJsonTokenizer_nextToken(QxJsonTokenizer *self, QxJsonToken *token)
+int QxJsonTokenizer_end(QxJsonTokenizer *self)
+{
+	return self->end(self);
+}
+
+/* Private implementations */
+
+static int Tokenizer_feedDefault(QxJsonTokenizer *self, wchar_t character)
 {
 	assert(self != NULL);
-	assert(token != NULL);
 
-	while (!Tokenizer_streamAtEnd(self))
+	switch (character)
 	{
-		switch (*self->streamCursor)
+	case L'\t':
+	case L'\n':
+	case L'\r':
+	case L' ':
+		/* Ignored white space */
+		return 0;
+
+	case L'"':
+		self->feed = &Tokenizer_feedString;
+		self->end = &Tokenizer_endUnexpected;
+		self->bufferSize = 0;
+		return 0;
+
+	case L',':
+		return Tokenizer_raiseToken(self, QxJsonTokenValuesSeparator);
+
+	case L'-':
+		self->feed = &Tokenizer_feedNumberMinus;
+		self->end = &Tokenizer_endUnexpected;
+		self->bufferSize = 0;
+		return Tokenizer_wcharToBuffer(self, L'-');
+
+	case L'0':
+		self->feed = &Tokenizer_feedNumberZero;
+		self->end = &Tokenizer_endUnexpected;
+		self->bufferSize = 0;
+		return Tokenizer_wcharToBuffer(self, L'0');
+
+	case L':':
+		return Tokenizer_raiseToken(self, QxJsonTokenNameValueSeparator);
+
+	case L'[':
+		return Tokenizer_raiseToken(self, QxJsonTokenBeginArray);
+
+	case L']':
+		return Tokenizer_raiseToken(self, QxJsonTokenEndArray);
+
+	case L'f':
+		self->feed = &Tokenizer_feedF;
+		self->end = &Tokenizer_endUnexpected;
+		return 0;
+
+	case L'n':
+		self->feed = &Tokenizer_feedN;
+		self->end = &Tokenizer_endUnexpected;
+		return 0;
+
+	case L't':
+		self->feed = &Tokenizer_feedT;
+		self->end = &Tokenizer_endUnexpected;
+		return 0;
+
+	case L'{':
+		return Tokenizer_raiseToken(self, QxJsonTokenBeginObject);
+
+	case L'}':
+		return Tokenizer_raiseToken(self, QxJsonTokenEndObject);
+
+	default:
+
+		if (WITHIN_1_9(character))
 		{
-		case L'\t':
-		case L'\n':
-		case L'\r':
-		case L' ':
-			/* Ignored white space */
-			++self->streamCursor;
-			break;
-
-		case L'"':
-			return Tokenizer_nextString(self, token);
-
-		case L',':
-			return Tokenizer_nextAtom(self, token, QxJsonTokenValuesSeparator);
-
-		case L':':
-			return Tokenizer_nextAtom(self,
-				token, QxJsonTokenNameValueSeparator);
-
-		case L'[':
-			return Tokenizer_nextAtom(self, token, QxJsonTokenBeginArray);
-
-		case L']':
-			return Tokenizer_nextAtom(self, token, QxJsonTokenEndArray);
-
-		case L'f':
-			return Tokenizer_nextIdentifier(self,
-				token, "alse", QxJsonTokenFalse);
-
-		case L'n':
-			return Tokenizer_nextIdentifier(self,
-				token, "ull", QxJsonTokenNull);
-
-		case L't':
-			return Tokenizer_nextIdentifier(self,
-				token, "rue", QxJsonTokenTrue);
-
-		case L'{':
-			return Tokenizer_nextAtom(self, token, QxJsonTokenBeginObject);
-
-		case L'}':
-			return Tokenizer_nextAtom(self, token, QxJsonTokenEndObject);
-
-		default:
-
-			if (DIGIT(*self->streamCursor) || (*self->streamCursor == L'-'))
-			{
-				return Tokenizer_nextNumber(self, token);
-			}
-
-			/* Unexpected character */
-			return -1;
+			self->feed = &Tokenizer_feedNumberInteger;
+			self->end = &Tokenizer_endNumber;
+			return Tokenizer_wcharToBuffer(self, character);
 		}
+	}
+
+	/* Unexpected character */
+	return -1;
+}
+
+static int Tokenizer_feedString(QxJsonTokenizer *self, wchar_t character)
+{
+	switch (character)
+	{
+	case L'"': /* End of the string */
+		return Tokenizer_raiseToken(self, QxJsonTokenString);
+
+	case L'\\': /* Escaped sequence */
+		self->feed = &Tokenizer_feedStringEscape;
+		self->end = &Tokenizer_endUnexpected;
+		break;
+
+	default:
+		Tokenizer_wcharToBuffer(self, character);
 	}
 
 	return 0;
 }
 
-/* Private implementations */
-
-static int Tokenizer_streamAtEnd(QxJsonTokenizer *self)
+static int Tokenizer_feedStringEscape(QxJsonTokenizer *self, wchar_t character)
 {
-	return self->streamCursor == self->streamEnd;
+	wchar_t const *const translation =
+		L"\"" L"\""
+		L"/"  L"/"
+		L"\\" L"\\"
+		L"b"  L"\b"
+		L"f"  L"\f"
+		L"r"  L"\r"
+		L"n"  L"\n"
+		L"t"  L"\t";
+	wchar_t const *translationOffset = translation;
+
+	if (character == L'u')
+	{
+		self->feed = &Tokenizer_feedStringUnicode;
+		assert(self->end == &Tokenizer_endUnexpected);
+		return 0;
+	}
+
+	translationOffset = translation;
+
+	while (*translationOffset && (character != *translationOffset))
+	{
+		translationOffset += 2;
+	}
+
+	if (*translationOffset)
+	{
+		self->feed = &Tokenizer_feedString;
+		assert(self->end == &Tokenizer_endUnexpected);
+		return Tokenizer_wcharToBuffer(self, *(translationOffset + 1));
+	}
+
+	/* Unsupported escapped sequence */
+	return -1;
+}
+
+static int hexaDigitToValue(wchar_t digit)
+{
+	if (WITHIN_0_9(digit))
+	{
+		return digit - L'0';
+	}
+
+	if (WITHIN_a_f(digit))
+	{
+		return digit - L'a' + 10;
+	}
+
+	if (WITHIN_A_F(digit))
+	{
+		return digit - L'A' + 10;
+	}
+
+	return -1;
+}
+
+static int Tokenizer_feedStringUnicode(QxJsonTokenizer *self, wchar_t character)
+{
+	int const value = hexaDigitToValue(character);
+
+	if (value < 0)
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->feed = &Tokenizer_feedStringUnicode0;
+	assert(self->end == &Tokenizer_endUnexpected);
+	return Tokenizer_wcharToBuffer(self, value << 24);
+}
+
+static int Tokenizer_feedStringUnicode0(QxJsonTokenizer *self, wchar_t character)
+{
+	int const value = hexaDigitToValue(character);
+
+	if (value < 0)
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->feed = &Tokenizer_feedStringUnicode1;
+	assert(self->end == &Tokenizer_endUnexpected);
+	self->bufferData[self->bufferSize] |= value << 16;
+	return 0;
+}
+
+static int Tokenizer_feedStringUnicode1(QxJsonTokenizer *self, wchar_t character)
+{
+	int const value = hexaDigitToValue(character);
+
+	if (value < 0)
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->feed = &Tokenizer_feedStringUnicode2;
+	assert(self->end == &Tokenizer_endUnexpected);
+	self->bufferData[self->bufferSize] |= value << 8;
+	return 0;
+}
+
+static int Tokenizer_feedStringUnicode2(QxJsonTokenizer *self, wchar_t character)
+{
+	int const value = hexaDigitToValue(character);
+
+	if (value < 0)
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->feed = &Tokenizer_feedString;
+	assert(self->end == &Tokenizer_endUnexpected);
+	self->bufferData[self->bufferSize] |= value;
+	return 0;
+}
+
+static int Tokenizer_feedF(QxJsonTokenizer *self, wchar_t character)
+{
+	if (character != L'a')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->feed = &Tokenizer_feedFa;
+	assert(self->end == &Tokenizer_endUnexpected);
+	return 0;
+}
+
+static int Tokenizer_feedFa(QxJsonTokenizer *self, wchar_t character)
+{
+	if (character != L'l')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->feed = &Tokenizer_feedFal;
+	assert(self->end == &Tokenizer_endUnexpected);
+	return 0;
+}
+
+static int Tokenizer_feedFal(QxJsonTokenizer *self, wchar_t character)
+{
+	if (character != L's')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->feed = &Tokenizer_feedFals;
+	assert(self->end == &Tokenizer_endUnexpected);
+	return 0;
+}
+
+static int Tokenizer_feedFals(QxJsonTokenizer *self, wchar_t character)
+{
+	if (character != L'e')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->feed = &Tokenizer_feedDefault;
+	self->end = &Tokenizer_endDefault;
+	return Tokenizer_raiseToken(self, QxJsonTokenFalse);
+}
+
+static int Tokenizer_feedN(QxJsonTokenizer *self, wchar_t character)
+{
+	if (character != L'u')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->feed = &Tokenizer_feedNu;
+	assert(self->end == &Tokenizer_endUnexpected);
+	return 0;
+}
+
+static int Tokenizer_feedNu(QxJsonTokenizer *self, wchar_t character)
+{
+	if (character != L'l')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->feed = &Tokenizer_feedNul;
+	assert(self->end == &Tokenizer_endUnexpected);
+	return 0;
+}
+
+static int Tokenizer_feedNul(QxJsonTokenizer *self, wchar_t character)
+{
+	if (character != L'l')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->feed = &Tokenizer_feedDefault;
+	self->end = &Tokenizer_endDefault;
+	return Tokenizer_raiseToken(self, QxJsonTokenNull);
+}
+
+static int Tokenizer_feedT(QxJsonTokenizer *self, wchar_t character)
+{
+	if (character != L'r')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->feed = &Tokenizer_feedTr;
+	assert(self->end == &Tokenizer_endUnexpected);
+	return 0;
+}
+
+static int Tokenizer_feedTr(QxJsonTokenizer *self, wchar_t character)
+{
+	if (character != L'u')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->feed = &Tokenizer_feedTru;
+	assert(self->end == &Tokenizer_endUnexpected);
+	return 0;
+}
+
+static int Tokenizer_feedTru(QxJsonTokenizer *self, wchar_t character)
+{
+	if (character != L'e')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->feed = &Tokenizer_feedDefault;
+	self->end = &Tokenizer_endDefault;
+	return Tokenizer_raiseToken(self, QxJsonTokenTrue);
+}
+
+static int Tokenizer_feedNumberMinus(QxJsonTokenizer *self, wchar_t character)
+{
+	if (character == L'0')
+	{
+		Tokenizer_wcharToBuffer(self, L'0');
+		self->feed = &Tokenizer_feedNumberZero;
+		self->end = &Tokenizer_endNumber;
+		return 0;
+	}
+
+	if (WITHIN_1_9(character))
+	{
+		Tokenizer_wcharToBuffer(self, character);
+		self->feed = &Tokenizer_feedNumberInteger;
+		self->end = &Tokenizer_endNumber;
+		return 0;
+	}
+
+	/* Unexpected character */
+	return -1;
+}
+
+static int Tokenizer_feedNumberZero(QxJsonTokenizer *self, wchar_t character)
+{
+	int error;
+
+	if (character == L'.')
+	{
+		Tokenizer_wcharToBuffer(self, L'.');
+		self->feed = &Tokenizer_feedNumberDot;
+		self->end = &Tokenizer_endUnexpected;
+		return 0;
+	}
+
+	if ((character == L'e') || (character == L'E'))
+	{
+		Tokenizer_wcharToBuffer(self, character);
+		self->feed = &Tokenizer_feedNumberExponent;
+		self->end = &Tokenizer_endUnexpected;
+		return 0;
+	}
+
+	/* Maybe a new token */
+	error = Tokenizer_endNumber(self);
+	assert(self->feed == &Tokenizer_feedDefault);
+	assert(self->end == &Tokenizer_endDefault);
+	return error ? error : Tokenizer_feedDefault(self, character);
+}
+
+static int Tokenizer_feedNumberInteger(QxJsonTokenizer *self, wchar_t character)
+{
+	if (WITHIN_0_9(character))
+	{
+		Tokenizer_wcharToBuffer(self, character);
+		return 0;
+	}
+
+	/* Same expectations that after 0 */
+	return Tokenizer_feedNumberZero(self, character);
+}
+
+static int Tokenizer_feedNumberDot(QxJsonTokenizer *self, wchar_t character)
+{
+	if (WITHIN_0_9(character))
+	{
+		Tokenizer_wcharToBuffer(self, character);
+		self->feed = &Tokenizer_feedNumberFrac;
+		self->end = &Tokenizer_endNumber;
+		return 0;
+	}
+
+	/* Unexpected character */
+	return -1;
+}
+
+static int Tokenizer_feedNumberFrac(QxJsonTokenizer *self, wchar_t character)
+{
+	int error;
+
+	if (WITHIN_0_9(character))
+	{
+		Tokenizer_wcharToBuffer(self, character);
+		return 0;
+	}
+
+	if ((character == L'e') || (character == L'E'))
+	{
+		Tokenizer_wcharToBuffer(self, character);
+		self->feed = &Tokenizer_feedNumberExponent;
+		self->end = &Tokenizer_endUnexpected;
+		return 0;
+	}
+
+	/* Maybe a new token */
+	error = Tokenizer_endNumber(self);
+	assert(self->feed == &Tokenizer_feedDefault);
+	assert(self->end == &Tokenizer_endDefault);
+	return error ? error : Tokenizer_feedDefault(self, character);
+}
+
+static int Tokenizer_feedNumberExponent(QxJsonTokenizer *self, wchar_t character)
+{
+	if ((character == L'-') || (character == L'+'))
+	{
+		Tokenizer_wcharToBuffer(self, character);
+		self->feed = &Tokenizer_feedNumberExponentSign;
+		self->end = &Tokenizer_endUnexpected;
+		return 0;
+	}
+
+	/* Same expectation as exponent sign */
+	return Tokenizer_feedNumberExponentSign(self, character);
+}
+
+static int Tokenizer_feedNumberExponentSign(QxJsonTokenizer *self, wchar_t character)
+{
+	if (WITHIN_0_9(character))
+	{
+		Tokenizer_wcharToBuffer(self, character);
+		self->feed = &Tokenizer_feedNumberExponentInteger;
+		self->end = &Tokenizer_endNumber;
+		return 0;
+	}
+
+	/* Unexpected character */
+	return -1;
+}
+
+static int Tokenizer_feedNumberExponentInteger(QxJsonTokenizer *self, wchar_t character)
+{
+	int error;
+
+	if (WITHIN_0_9(character))
+	{
+		Tokenizer_wcharToBuffer(self, character);
+		self->feed = &Tokenizer_feedNumberExponentInteger;
+		self->end = &Tokenizer_endNumber;
+		return 0;
+	}
+
+	/* Maybe a new token */
+	error = Tokenizer_endNumber(self);
+	assert(self->feed == &Tokenizer_feedDefault);
+	assert(self->end == &Tokenizer_endDefault);
+	return error ? error : Tokenizer_feedDefault(self, character);
+}
+
+static int Tokenizer_endDefault(QxJsonTokenizer *self)
+{
+	QX_UNUSED(self);
+	return 0;
+}
+
+static int Tokenizer_endUnexpected(QxJsonTokenizer *self)
+{
+	QX_UNUSED(self);
+	return -1;
+}
+
+static int Tokenizer_endNumber(QxJsonTokenizer *self)
+{
+	return Tokenizer_raiseToken(self, QxJsonTokenNumber);
 }
 
 static int Tokenizer_wcharToBuffer(QxJsonTokenizer *self, wchar_t character)
@@ -180,177 +658,42 @@ static int Tokenizer_wcharToBuffer(QxJsonTokenizer *self, wchar_t character)
 	return 0;
 }
 
-static int Tokenizer_cursorToBuffer(QxJsonTokenizer *self)
+static int Tokenizer_raiseToken(QxJsonTokenizer *self, QxJsonTokenType type)
 {
-	int const error = Tokenizer_wcharToBuffer(self, *self->streamCursor);
-	++self->streamCursor;
-	return error;
-}
+	QxJsonToken token;
+	self->feed = &Tokenizer_feedDefault;
+	self->end = &Tokenizer_endDefault;
+	int error;
 
-static int Tokenizer_nextAtom(QxJsonTokenizer *self,
-	QxJsonToken *token, QxJsonTokenType type)
-{
-	++self->streamCursor;
-	token->type = type;
-	token->size = 0;
-	token->data = 0;
-	return 1;
-}
-
-static int Tokenizer_nextIdentifier(QxJsonTokenizer *self,
-	QxJsonToken *token, char const *identifier, QxJsonTokenType type)
-{
-	for (++self->streamCursor; !Tokenizer_streamAtEnd(self) && *identifier;
-		++self->streamCursor, ++identifier)
+	if (self->handler)
 	{
-		if (*self->streamCursor != *identifier)
+		token.type = type;
+
+		if (self->bufferSize)
 		{
-			return -1;
-		}
-	}
+			/* Add a trailing nul character */
+			error = Tokenizer_wcharToBuffer(self, L'\0');
 
-	if (*identifier)
-	{
-		return -1;
-	}
-
-	token->type = type;
-	token->size = 0;
-	token->data = NULL;
-	return 1;
-}
-
-static int Tokenizer_nextString(QxJsonTokenizer *self, QxJsonToken *token)
-{
-	wchar_t const *const translation =
-		L"\"" L"\""
-		L"/"  L"/"
-		L"\\" L"\\"
-		L"b"  L"\b"
-		L"f"  L"\f"
-		L"r"  L"\r"
-		L"n"  L"\n"
-		L"t"  L"\t";
-	wchar_t const *translationOffset;
-
-	assert(self != NULL);
-	assert(token != NULL);
-
-	assert(*self->streamCursor == L'"');
-	++self->streamCursor;
-	self->bufferSize = 0;
-
-	while (!Tokenizer_streamAtEnd(self))
-	{
-		switch (*self->streamCursor)
-		{
-		case L'"': /* End of the string */
-			++self->streamCursor;
-			token->type = QxJsonTokenString;
-			token->size = self->bufferSize;
-			token->data = self->bufferData;
-			Tokenizer_wcharToBuffer(self, L'\0');
-			return 1;
-
-		case L'\\': /* Escaped sequence */
-			++self->streamCursor;
-			translationOffset = translation;
-
-			while (*translationOffset && (*self->streamCursor != *translationOffset))
+			if (error)
 			{
-				translationOffset += 2;
+				return error;
 			}
 
-			if (!*translationOffset)
-			{
-				/* Unsupported escapped sequence */
-				return -1;
-			}
+			/* minus the trailing nul character */
+			token.size = self->bufferSize - 1;
+			token.data = self->bufferData;
 
-			Tokenizer_wcharToBuffer(self, *(translationOffset + 1));
-			++self->streamCursor;
-			break;
-
-		default:
-			Tokenizer_cursorToBuffer(self);
-			break;
+			self->bufferSize = 0;
 		}
+		else
+		{
+			token.size = 0;
+			token.data = NULL;
+		}
+
+		return self->handler->feed(self->handler, &token);
 	}
-
-	token->type = QxJsonTokenString;
-	token->size = self->bufferSize;
-	token->data = self->bufferData;
-	return 1;
-}
-
-static int Tokenizer_nextNumber(QxJsonTokenizer *self, QxJsonToken *token)
-{
-	assert(self != NULL);
-	assert(token != NULL);
-	assert(!Tokenizer_streamAtEnd(self));
 
 	self->bufferSize = 0;
-
-	if (*self->streamCursor == L'-')
-	{
-		Tokenizer_cursorToBuffer(self);
-	}
-
-	if (Tokenizer_streamAtEnd(self))
-	{
-		/* Unexpected end of stream */
-		return -1;
-	}
-
-	if (*self->streamCursor == L'0')
-	{
-		Tokenizer_cursorToBuffer(self);
-	}
-	else if (DIGIT_1_9(*self->streamCursor))
-	{
-		Tokenizer_cursorToBuffer(self);
-
-		while (!Tokenizer_streamAtEnd(self) && DIGIT(*self->streamCursor))
-		{
-			Tokenizer_cursorToBuffer(self);
-		}
-	}
-	else
-	{
-		/* Unexpected character */
-		return -1;
-	}
-
-	if (!Tokenizer_streamAtEnd(self) && (*self->streamCursor == L'.'))
-	{
-		Tokenizer_cursorToBuffer(self);
-
-		while ((self->streamCursor != self->streamEnd) && DIGIT(*self->streamCursor))
-		{
-			Tokenizer_cursorToBuffer(self);
-		}
-	}
-
-	if (!Tokenizer_streamAtEnd(self)
-		&& ((*self->streamCursor == L'e') || (*self->streamCursor == L'E')))
-	{
-		Tokenizer_cursorToBuffer(self);
-
-		if (!Tokenizer_streamAtEnd(self)
-			&& ((*self->streamCursor == L'-') || (*self->streamCursor == L'+')))
-		{
-			Tokenizer_cursorToBuffer(self);
-		}
-
-		while (!Tokenizer_streamAtEnd(self) && DIGIT(*self->streamCursor))
-		{
-			Tokenizer_cursorToBuffer(self);
-		}
-	}
-
-	token->type = QxJsonTokenNumber;
-	token->size = self->bufferSize;
-	token->data = self->bufferData;
-	Tokenizer_wcharToBuffer(self, L'\0');
-	return 1;
+	return 0;
 }
