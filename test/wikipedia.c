@@ -16,7 +16,6 @@
 
 struct Wikipedia
 {
-	QxJsonTokenizerHandler handler;
 	char buffer[1024];
 	size_t size;
 };
@@ -55,11 +54,11 @@ static char const *typeIdentifier(QxJsonTokenType type)
 	return NULL;
 }
 
-static int Wikipedia_feed(QxJsonTokenizerHandler *self, QxJsonToken const *token)
+static int Wikipedia_feed(QxJsonToken const *token, void *userData)
 {
-	Wikipedia *const wikipedia = (Wikipedia *)self;
+	Wikipedia *const self = (Wikipedia *)userData;
 
-	wikipedia->size += sprintf(wikipedia->buffer + wikipedia->size, typeIdentifier(token->type));
+	self->size += sprintf(self->buffer + self->size, typeIdentifier(token->type));
 
 	switch (token->type)
 	{
@@ -67,8 +66,8 @@ static int Wikipedia_feed(QxJsonTokenizerHandler *self, QxJsonToken const *token
 	case QxJsonTokenNumber:
 		expect_not_zero(token->size);
 		expect_not_null(token->data);
-		unicode2ascii(wikipedia->buffer + wikipedia->size, token->data, token->size);
-		wikipedia->size += token->size;
+		unicode2ascii(self->buffer + self->size, token->data, token->size);
+		self->size += token->size;
 		break;
 
 	default:
@@ -76,8 +75,8 @@ static int Wikipedia_feed(QxJsonTokenizerHandler *self, QxJsonToken const *token
 		expect_null(token->data);
 	}
 
-	wikipedia->buffer[wikipedia->size] = '\n';
-	++wikipedia->size;
+	self->buffer[self->size] = '\n';
+	++self->size;
 	return 0;
 }
 
@@ -91,9 +90,8 @@ int main(void)
 	QxJsonTokenizer *tokenizer;
 
 	/* Create the tokenizer */
-	wikipedia.handler.feed = &Wikipedia_feed;
 	wikipedia.size = 0;
-	tokenizer = QxJsonTokenizer_new(&wikipedia.handler);
+	tokenizer = QxJsonTokenizer_new(&Wikipedia_feed, &wikipedia);
 	expect_not_null(tokenizer);
 
 	/* Read the JSON file */

@@ -48,18 +48,16 @@ typedef struct QxJsonToken QxJsonToken;
 /**
  * @brief Interface of a tokens handler
  */
-typedef struct QxJsonTokenizerHandler QxJsonTokenizerHandler;
-struct QxJsonTokenizerHandler
-{
-	int(*feed)(QxJsonTokenizerHandler *self, QxJsonToken const *token);
-};
+typedef int(*QxJsonTokenizerHandler)(QxJsonToken const *token, void *userData);
+
 
 /**
  * @brief Create a new tokenizer.
- * @param[int] handler The tokens handler.
+ * @param handler The tokens handler.
+ * @param userData A custom pointer forwarded to the handler.
  * @return A tokenizer on success. A null pointer otherwise.
  */
-QX_API QxJsonTokenizer *QxJsonTokenizer_new(QxJsonTokenizerHandler *handler);
+QX_API QxJsonTokenizer *QxJsonTokenizer_new(QxJsonTokenizerHandler handler, void *userData);
 
 /**
  * @brief Delete a tokenizer.

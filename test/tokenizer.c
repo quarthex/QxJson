@@ -16,23 +16,22 @@
 
 struct Tester
 {
-	QxJsonTokenizerHandler tokenizerHandler;
 	size_t index;
 	size_t count;
 	QxJsonToken const *tokens;
 };
 typedef struct Tester Tester;
 
-int Tester_feed(QxJsonTokenizerHandler *self, QxJsonToken const *token)
+int Tester_feed(QxJsonToken const *token, void *userData)
 {
-	Tester *const tester = (Tester *)self;
+	Tester *const self = (Tester *)userData;
 	QxJsonToken const *pattern;
 
 	expect_not_null(self);
 	expect_not_null(token);
-	expect_int_not_equal(tester->index, tester->count);
+	expect_int_not_equal(self->index, self->count);
 
-	pattern = &tester->tokens[tester->index];
+	pattern = &self->tokens[self->index];
 	expect_int_equal(token->type, pattern->type);
 	expect_int_equal(token->size, pattern->size);
 
@@ -47,7 +46,7 @@ int Tester_feed(QxJsonTokenizerHandler *self, QxJsonToken const *token)
 		expect_null(token->data);
 	}
 
-	++tester->index;
+	++self->index;
 	return 0;
 }
 
@@ -57,11 +56,10 @@ static void testGeneric(wchar_t const *data,
 	Tester tester;
 	QxJsonTokenizer *tokenizer;
 
-	tokenizer = QxJsonTokenizer_new(&tester.tokenizerHandler);
+	tokenizer = QxJsonTokenizer_new(&Tester_feed, &tester);
 	expect_not_null(tokenizer);
 
-	memset(&tester, 0, sizeof(tester));
-	tester.tokenizerHandler.feed = &Tester_feed;
+	tester.index = 0;
 	tester.count = tokensCount;
 	tester.tokens = tokens;
 	expect_zero(QxJsonTokenizer_feed(tokenizer, data, wcslen(data)));
