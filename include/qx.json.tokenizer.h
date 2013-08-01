@@ -61,15 +61,15 @@ QX_API QxJsonTokenizer *QxJsonTokenizer_new(QxJsonTokenizerHandler handler, void
 
 /**
  * @brief Delete a tokenizer.
- * @param[out] self The tokenizer to be freed.
+ * @param self The tokenizer to be freed.
  */
 QX_API void QxJsonTokenizer_delete(QxJsonTokenizer *self);
 
 /**
  * @brief Feed new data to the tokenizer.
- * @param[out] self The tokenizer instance.
- * @param[in] data A buffer containing the new data.
- * @param[in] size The amount of characters (not the bytes count).
+ * @param self The tokenizer instance.
+ * @param data A buffer containing the new data.
+ * @param size The amount of characters (not the bytes count).
  * @return 0 on success.
  */
 QX_API int QxJsonTokenizer_feed(QxJsonTokenizer *self,
@@ -77,9 +77,20 @@ QX_API int QxJsonTokenizer_feed(QxJsonTokenizer *self,
 
 /**
  * @brief Notify the tokenizer about the end of the data stream.
- * @param[out] self The tokenizer instance.
+ * @param self The tokenizer instance.
  * @return 0 on success.
  */
 QX_API int QxJsonTokenizer_end(QxJsonTokenizer *self);
+
+/**
+ * @brief Shortcut method to tokenize a simple unicode string.
+ * @param data The string to be tokenized.
+ * @param size The size of the string.
+ * @param handler The tokens handler.
+ * @param userData A custom pointer forwarded to the handler.
+ * @return 0 on success.
+ */
+QX_API int qxJsonTokenize(wchar_t const *data, size_t size,
+	QxJsonTokenizerHandler handler, void *userData);
 
 #endif /* _H_QX_JSON_TOKENIZER */

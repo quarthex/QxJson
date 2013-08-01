@@ -147,6 +147,27 @@ int QxJsonTokenizer_end(QxJsonTokenizer *self)
 	return self->step->end(self);
 }
 
+int qxJsonTokenize(wchar_t const *data, size_t size,
+	QxJsonTokenizerHandler handler, void *userData)
+{
+	QxJsonTokenizer *instance;
+	int error = -1;
+
+	instance = QxJsonTokenizer_new(handler, userData);
+
+	if (instance)
+	{
+		error = QxJsonTokenizer_feed(instance, data, size);
+
+		if (!error)
+			error = QxJsonTokenizer_end(instance);
+
+		QxJsonTokenizer_delete(instance);
+	}
+
+	return error;
+}
+
 /* Private implementations */
 
 static int feedDefault(QxJsonTokenizer *self, wchar_t character)

@@ -87,12 +87,6 @@ int main(void)
 	wchar_t wbuffer[sizeof(buffer)];
 	ssize_t bufferSize;
 	Wikipedia wikipedia;
-	QxJsonTokenizer *tokenizer;
-
-	/* Create the tokenizer */
-	wikipedia.size = 0;
-	tokenizer = QxJsonTokenizer_new(&Wikipedia_feed, &wikipedia);
-	expect_not_null(tokenizer);
 
 	/* Read the JSON file */
 	fd = open("wikipedia.json", O_RDONLY);
@@ -101,10 +95,10 @@ int main(void)
 	expect_ok(bufferSize > 0);
 	close(fd);
 
-	/* Feed the tokenizer */
+	/* Tokenize */
 	ascii2unicode(wbuffer, buffer, bufferSize);
-	expect_zero(QxJsonTokenizer_feed(tokenizer, wbuffer, bufferSize));
-	expect_zero(QxJsonTokenizer_end(tokenizer));
+	wikipedia.size = 0;
+	expect_zero(qxJsonTokenize(wbuffer, bufferSize, &Wikipedia_feed, &wikipedia));
 
 	/* Read the parsed file */
 	fd = open("wikipedia.parsed", O_RDONLY);
