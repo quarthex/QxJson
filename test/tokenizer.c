@@ -50,22 +50,23 @@ int Tester_feed(QxJsonToken const *token, void *userData)
 	return 0;
 }
 
-static void testGeneric(wchar_t const *data,
+static void testGeneric(char const *data,
 	QxJsonToken const *tokens, size_t tokensCount)
 {
 	Tester tester;
-	QxJsonTokenizer *tokenizer;
+	QxJsonAsciiTokenizer *tokenizer;
 
-	tokenizer = QxJsonTokenizer_new(&Tester_feed, &tester);
+	tokenizer = QxJsonAsciiTokenizer_new(&Tester_feed, &tester);
 	expect_not_null(tokenizer);
 
 	tester.index = 0;
 	tester.count = tokensCount;
 	tester.tokens = tokens;
-	expect_zero(QxJsonTokenizer_feed(tokenizer, data, wcslen(data)));
+	expect_zero(QxJsonAsciiTokenizer_feed(tokenizer, data, strlen(data)));
+	expect_zero(QxJsonAsciiTokenizer_end(tokenizer));
 	expect_int_equal(tester.index, tester.count);
 
-	QxJsonTokenizer_delete(tokenizer);
+	QxJsonAsciiTokenizer_delete(tokenizer);
 	return;
 }
 
@@ -76,7 +77,7 @@ static void testArray(void)
 		{ QxJsonTokenValuesSeparator, NULL, 0 },
 		{ QxJsonTokenEndArray       , NULL, 0 }
 	};
-	testGeneric(L"[ , ]", tokens, ARRAY_SIZE(tokens));
+	testGeneric("[ , ]", tokens, ARRAY_SIZE(tokens));
 	return;
 }
 
@@ -89,28 +90,28 @@ static void testObject(void)
 		{ QxJsonTokenNameValueSeparator, NULL, 0 },
 		{ QxJsonTokenEndObject         , NULL, 0 }
 	};
-	testGeneric(L"{ : , : }", tokens, ARRAY_SIZE(tokens));
+	testGeneric("{ : , : }", tokens, ARRAY_SIZE(tokens));
 	return;
 }
 
 static void testNull(void)
 {
 	QxJsonToken const token = { QxJsonTokenNull, NULL, 0 };
-	testGeneric(L"null", &token, 1);
+	testGeneric("null", &token, 1);
 	return;
 }
 
 static void testTrue(void)
 {
 	QxJsonToken const token = { QxJsonTokenTrue, NULL, 0 };
-	testGeneric(L"true", &token, 1);
+	testGeneric("true", &token, 1);
 	return;
 }
 
 static void testFalse(void)
 {
 	QxJsonToken const token = { QxJsonTokenFalse, NULL, 0 };
-	testGeneric(L"false", &token, 1);
+	testGeneric("false", &token, 1);
 	return;
 }
 
@@ -121,7 +122,7 @@ static void testString(void)
 		{ QxJsonTokenString, L"QxJson"    , 6 },
 		{ QxJsonTokenString, L"[\r,\n,\t]", 7 }
 	};
-	testGeneric(L"\"\"" L"\"QxJson\"" L"\"[\\r,\\n,\\t]\"",
+	testGeneric("\"\"" "\"QxJson\"" "\"[\\r,\\n,\\t]\"",
 		tokens, ARRAY_SIZE(tokens));
 	return;
 }
@@ -131,7 +132,7 @@ static void testNumber(void)
 	QxJsonToken const tokens[] = {
 		{ QxJsonTokenNumber, L"3.1415E-6", 9 }
 	};
-	testGeneric(L"3.1415E-6 ", tokens, ARRAY_SIZE(tokens));
+	testGeneric("3.1415E-6 ", tokens, ARRAY_SIZE(tokens));
 	return;
 }
 

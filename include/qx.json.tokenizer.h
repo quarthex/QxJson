@@ -11,11 +11,6 @@
 #include "qx.json.macro.h"
 
 /**
- * @brief JSON stream tokenizer.
- */
-typedef struct QxJsonTokenizer QxJsonTokenizer;
-
-/**
  * @brief The type of a JSON token.
  */
 enum QxJsonTokenType
@@ -50,6 +45,12 @@ typedef struct QxJsonToken QxJsonToken;
  */
 typedef int(*QxJsonTokenizerHandler)(QxJsonToken const *token, void *userData);
 
+/* Unicode tokenizer */
+
+/**
+ * @brief JSON stream tokenizer.
+ */
+typedef struct QxJsonTokenizer QxJsonTokenizer;
 
 /**
  * @brief Create a new tokenizer.
@@ -91,6 +92,56 @@ QX_API int QxJsonTokenizer_end(QxJsonTokenizer *self);
  * @return 0 on success.
  */
 QX_API int qxJsonTokenize(wchar_t const *data, size_t size,
+	QxJsonTokenizerHandler handler, void *userData);
+
+/* ASCII tokenizer */
+
+/**
+ * @brief JSON ASCII stream tokenizer.
+ */
+typedef struct QxJsonAsciiTokenizer QxJsonAsciiTokenizer;
+
+/**
+ * @brief Create a new ASCII tokenizer.
+ * @param handler The tokens handler.
+ * @param userData A custom pointer forwarded to the handler.
+ * @return An ASCII tokenizer on success. A null pointer otherwise.
+ */
+QX_API QxJsonAsciiTokenizer *QxJsonAsciiTokenizer_new(
+	QxJsonTokenizerHandler handler, void *userData);
+
+/**
+ * @brief Delete an ASCII tokenizer.
+ * @param self The ASCII tokenizer to be freed.
+ */
+QX_API void QxJsonAsciiTokenizer_delete(QxJsonAsciiTokenizer *self);
+
+/**
+ * @brief Feed new data to the ASCII tokenizer.
+ * @param self The ASCII tokenizer instance.
+ * @param data A buffer containing the new data.
+ * @param size The amount of characters.
+ * @return 0 on success.
+ */
+QX_API int QxJsonAsciiTokenizer_feed(QxJsonAsciiTokenizer *self,
+	char const *data, size_t size);
+
+/**
+ * @brief Notify the ASCII tokenizer about the end of the data stream.
+ * @param self The ASCII tokenizer instance.
+ * @return 0 on success.
+ */
+QX_API int QxJsonAsciiTokenizer_end(QxJsonAsciiTokenizer *self);
+
+/**
+ * @brief Shortcut method to tokenize a simple ASCII string.
+ * @param data The string to be tokenized.
+ * @param size The size of the string.
+ * @param handler The tokens handler.
+ * @param userData A custom pointer forwarded to the handler.
+ * @return 0 on success.
+ */
+QX_API int qxJsonAsciiTokenize(char const *data, size_t size,
 	QxJsonTokenizerHandler handler, void *userData);
 
 #endif /* _H_QX_JSON_TOKENIZER */

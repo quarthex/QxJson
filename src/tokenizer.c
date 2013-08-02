@@ -79,8 +79,10 @@ static Step const stepNumberExp = { &feedNumberExp , &endUnexpected };
 static Step const stepNumberExpSign = { &feedNumberExpSign , &endUnexpected };
 static Step const stepNumberExpInteger = { &feedNumberExpInteger, &endNumber };
 
+static void Tokenizer_init(QxJsonTokenizer *self,
+	QxJsonTokenizerHandler handler, void *userData);
+static void Tokenizer_dispose(QxJsonTokenizer *self);
 static int Tokenizer_wcharToBuffer(QxJsonTokenizer *self, wchar_t character);
-
 static int Tokenizer_raiseToken(QxJsonTokenizer *self, QxJsonTokenType type);
 
 /* Public implementations */
@@ -108,10 +110,7 @@ QxJsonTokenizer *QxJsonTokenizer_new(QxJsonTokenizerHandler handler, void *userD
 
 	if (instance)
 	{
-		memset(instance, 0, sizeof(QxJsonTokenizer));
-		instance->handler = handler;
-		instance->userData = userData;
-		instance->step = &stepDefault;
+		Tokenizer_init(instance, handler, userData);
 	}
 
 	return instance;
@@ -120,13 +119,7 @@ QxJsonTokenizer *QxJsonTokenizer_new(QxJsonTokenizerHandler handler, void *userD
 void QxJsonTokenizer_delete(QxJsonTokenizer *self)
 {
 	assert(self != NULL);
-
-	if (self->bufferData)
-	{
-		assert(self->bufferAlloc > 0);
-		free(self->bufferData);
-	}
-
+	Tokenizer_dispose(self);
 	free(self);
 	return;
 }
@@ -150,21 +143,79 @@ int QxJsonTokenizer_end(QxJsonTokenizer *self)
 int qxJsonTokenize(wchar_t const *data, size_t size,
 	QxJsonTokenizerHandler handler, void *userData)
 {
-	QxJsonTokenizer *instance;
+	QxJsonTokenizer instance;
 	int error = -1;
 
-	instance = QxJsonTokenizer_new(handler, userData);
+	Tokenizer_init(&instance, handler, userData);
+	error = QxJsonTokenizer_feed(&instance, data, size);
+
+	if (!error)
+		error = QxJsonTokenizer_end(&instance);
+
+	Tokenizer_dispose(&instance);
+	return error;
+}
+
+struct QxJsonAsciiTokenizer
+{
+	QxJsonTokenizer unicode;
+};
+
+QxJsonAsciiTokenizer *QxJsonAsciiTokenizer_new(
+	QxJsonTokenizerHandler handler, void *userData)
+{
+	QxJsonAsciiTokenizer *instance;
+	assert(handler != NULL);
+
+	instance = (QxJsonAsciiTokenizer *)malloc(sizeof(QxJsonAsciiTokenizer));
 
 	if (instance)
 	{
-		error = QxJsonTokenizer_feed(instance, data, size);
-
-		if (!error)
-			error = QxJsonTokenizer_end(instance);
-
-		QxJsonTokenizer_delete(instance);
+		Tokenizer_init(&instance->unicode, handler, userData);
 	}
 
+	return instance;
+}
+
+void QxJsonAsciiTokenizer_delete(QxJsonAsciiTokenizer *self)
+{
+	assert(self != NULL);
+	Tokenizer_dispose(&self->unicode);
+	free(self);
+}
+
+int QxJsonAsciiTokenizer_feed(QxJsonAsciiTokenizer *self,
+	char const *data, size_t size)
+{
+	int error = 0;
+
+	for (; size && !error; ++data, --size)
+		if (*data & 0x80)
+			error = -1; /* Invalid character */
+		else
+			error = self->unicode.step->feed(&self->unicode, *data);
+
+	return error;
+}
+
+int QxJsonAsciiTokenizer_end(QxJsonAsciiTokenizer *self)
+{
+	return self->unicode.step->end(&self->unicode);
+}
+
+int qxJsonAsciiTokenize(char const *data, size_t size,
+	QxJsonTokenizerHandler handler, void *userData)
+{
+	QxJsonAsciiTokenizer instance;
+	int error = -1;
+
+	Tokenizer_init(&instance.unicode, handler, userData);
+	error = QxJsonAsciiTokenizer_feed(&instance, data, size);
+
+	if (!error)
+		error = QxJsonTokenizer_end(&instance.unicode);
+
+	Tokenizer_dispose(&instance.unicode);
 	return error;
 }
 
@@ -643,6 +694,27 @@ static int endNumber(QxJsonTokenizer *self)
 {
 	return Tokenizer_raiseToken(self, QxJsonTokenNumber);
 }
+
+static void Tokenizer_init(QxJsonTokenizer *self,
+	QxJsonTokenizerHandler handler, void *userData)
+{
+	memset(self, 0, sizeof(QxJsonTokenizer));
+	self->handler = handler;
+	self->userData = userData;
+	self->step = &stepDefault;
+}
+
+static void Tokenizer_dispose(QxJsonTokenizer *self)
+{
+	assert(self != NULL);
+
+	if (self->bufferData)
+	{
+		assert(self->bufferAlloc > 0);
+		free(self->bufferData);
+	}
+}
+
 
 static int Tokenizer_wcharToBuffer(QxJsonTokenizer *self, wchar_t character)
 {

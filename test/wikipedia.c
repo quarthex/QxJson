@@ -21,12 +21,6 @@ struct Wikipedia
 };
 typedef struct Wikipedia Wikipedia;
 
-static void ascii2unicode(wchar_t *dest, char const *src, size_t size)
-{
-	for (; size; ++dest, ++src, --size)
-		*dest = (wchar_t)*src;
-}
-
 static void unicode2ascii(char *dest, wchar_t const *src, size_t size)
 {
 	for (; size; ++dest, ++src, --size)
@@ -84,7 +78,6 @@ int main(void)
 {
 	int fd;
 	char buffer[512];
-	wchar_t wbuffer[sizeof(buffer)];
 	ssize_t bufferSize;
 	Wikipedia wikipedia;
 
@@ -96,9 +89,8 @@ int main(void)
 	close(fd);
 
 	/* Tokenize */
-	ascii2unicode(wbuffer, buffer, bufferSize);
-	wikipedia.size = 0;
-	expect_zero(qxJsonTokenize(wbuffer, bufferSize, &Wikipedia_feed, &wikipedia));
+	memset(&wikipedia, 0, sizeof(wikipedia));
+	expect_zero(qxJsonAsciiTokenize(buffer, bufferSize, &Wikipedia_feed, &wikipedia));
 
 	/* Read the parsed file */
 	fd = open("wikipedia.parsed", O_RDONLY);
