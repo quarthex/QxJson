@@ -32,7 +32,7 @@ static void finalize(QxJsonValue *value)
 {
 	assert(value != NULL);
 	assert(QX_JSON_IS_STRING(value));
-	free(((QxJsonString *)(value))->data);
+	free(((QxJsonString *)value)->data);
 	return;
 }
 
@@ -54,8 +54,9 @@ QxJsonValue *qxJsonStringNew(qx_json_string_t data, size_t size)
 		{
 			instance->parent.klass = &klass;
 			instance->parent.ref = 0;
-			instance->data = (wchar_t *)malloc(size * sizeof(wchar_t));
+			instance->data = (wchar_t *)malloc((size + 1) * sizeof(wchar_t));
 			memcpy(instance->data, data, size * sizeof(wchar_t));
+			instance->data[size] = L'\0';
 			instance->size = size;
 			return &instance->parent;
 		}

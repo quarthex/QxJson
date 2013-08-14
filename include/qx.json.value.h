@@ -8,25 +8,12 @@
 #define _H_QX_JSON_VALUE
 
 #include "qx.json.macro.h"
+#include "qx.json.parser.h"
 
 /**
  * @brief Variant type that handle any JavaScript value kind.
  */
 typedef struct QxJsonValue QxJsonValue;
-
-/**
- * @brief The unique identifier of a value type.
- */
-typedef enum QxJsonValueType
-{
-	QxJsonValueTypeNull,
-	QxJsonValueTypeTrue,
-	QxJsonValueTypeFalse,
-	QxJsonValueTypeNumber,
-	QxJsonValueTypeString,
-	QxJsonValueTypeArray,
-	QxJsonValueTypeObject
-} QxJsonValueType;
 
 /**
  * @brief Increment the reference counter of a value.

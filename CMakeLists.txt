@@ -14,6 +14,7 @@ add_library(QxJson SHARED
 	include/qx.json.null.h
 	include/qx.json.number.h
 	include/qx.json.object.h
+	include/qx.json.parser.h
 	include/qx.json.string.h
 	include/qx.json.tokenizer.h
 	include/qx.json.true.h
@@ -23,6 +24,7 @@ add_library(QxJson SHARED
 	src/null.c
 	src/number.c
 	src/object.c
+	src/parser.c
 	src/string.c
 	src/tokenizer.c
 	src/true.c

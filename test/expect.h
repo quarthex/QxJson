@@ -26,6 +26,12 @@ void __expect_int_not_equal(char const *file, int line,
 #define expect_zero(value) expect_int_equal((value), 0)
 #define expect_not_zero(value) expect_int_not_equal((value), 0)
 
+/* Floating */
+void __expect_double_equal(char const *file, int line,
+	char const *actualName, double expected, double actual);
+#define expect_double_equal(actual, expected) \
+	__expect_double_equal(__FILE__, __LINE__, #actual, (expected), (actual))
+
 /* Pointers */
 #define expect_null(pointer) \
 	__expect(__FILE__, __LINE__, (pointer) == NULL, \

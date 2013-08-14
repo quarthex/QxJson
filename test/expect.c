@@ -42,6 +42,14 @@ void __expect_int_not_equal(char const *file, int line,
 			 "%s expected not to be equal to %d", actualName, expected);
 }
 
+void __expect_double_equal(char const *file, int line,
+	char const *actualName, double expected, double actual)
+{
+	__expect(file, line, expected == actual,
+		"%s expected to be equal to %g bus is actually equal to %g",
+		actualName, expected, actual);
+}
+
 void __expect_str_equal(char const *file, int line,
 	char const *actualName, char const *expected, char const *actual)
 {
