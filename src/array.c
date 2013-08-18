@@ -41,7 +41,7 @@ static void finalize(QxJsonValue *value)
 		{
 			node = array->node->previous;
 			array->node->previous = node->previous;
-			qxJsonValueUnref(node->value);
+			QxJsonValue_decref(node->value);
 			free(node);
 		}
 
@@ -49,11 +49,11 @@ static void finalize(QxJsonValue *value)
 		{
 			node = array->node->next;
 			array->node->next = node->next;
-			qxJsonValueUnref(node->value);
+			QxJsonValue_decref(node->value);
 			free(node);
 		}
 
-		qxJsonValueUnref(array->node->value);
+		QxJsonValue_decref(array->node->value);
 		free(array->node);
 	}
 
@@ -66,7 +66,7 @@ static QxJsonValueClass const klass =
 	QxJsonValueTypeArray
 };
 
-QxJsonValue *qxJsonArrayNew(void)
+QxJsonValue *QxJsonArray_new(void)
 {
 	QxJsonArray *const instance = ALLOC(QxJsonArray);
 
@@ -81,7 +81,7 @@ QxJsonValue *qxJsonArrayNew(void)
 	return NULL;
 }
 
-size_t qxJsonArraySize(QxJsonArray const *array)
+size_t QxJsonArray_size(QxJsonArray const *array)
 {
 	size_t size = 0;
 	Node *node;
@@ -104,9 +104,9 @@ size_t qxJsonArraySize(QxJsonArray const *array)
 	return size;
 }
 
-int qxJsonArrayAppend(QxJsonArray *array, QxJsonValue *value)
+int QxJsonArray_append(QxJsonArray *array, QxJsonValue *value)
 {
-	if (qxJsonArrayAppendNew(array, value))
+	if (QxJsonArray_appendNew(array, value))
 	{
 		return -1;
 	}
@@ -115,7 +115,7 @@ int qxJsonArrayAppend(QxJsonArray *array, QxJsonValue *value)
 	return 0;
 }
 
-int qxJsonArrayAppendNew(QxJsonArray *array, QxJsonValue *value)
+int QxJsonArray_appendNew(QxJsonArray *array, QxJsonValue *value)
 {
 	if (array && value && (&array->parent != value))
 	{
@@ -155,19 +155,19 @@ int qxJsonArrayAppendNew(QxJsonArray *array, QxJsonValue *value)
 	return -1;
 }
 
-int qxJsonArrayPrepend(QxJsonArray *array, QxJsonValue *value)
+int QxJsonArray_prepend(QxJsonArray *array, QxJsonValue *value)
 {
-	return qxJsonArrayInsert(array, 0, value);
+	return QxJsonArray_insert(array, 0, value);
 }
 
-int qxJsonArrayPrependNew(QxJsonArray *array, QxJsonValue *value)
+int QxJsonArray_prependNew(QxJsonArray *array, QxJsonValue *value)
 {
-	return qxJsonArrayInsertNew(array, 0, value);
+	return QxJsonArray_insertNew(array, 0, value);
 }
 
-int qxJsonArrayInsert(QxJsonArray *array, size_t index,  QxJsonValue *value)
+int QxJsonArray_insert(QxJsonArray *array, size_t index,  QxJsonValue *value)
 {
-	if (qxJsonArrayInsertNew(array, index, value))
+	if (QxJsonArray_insertNew(array, index, value))
 	{
 		return -1;
 	}
@@ -176,7 +176,7 @@ int qxJsonArrayInsert(QxJsonArray *array, size_t index,  QxJsonValue *value)
 	return 0;
 }
 
-int qxJsonArrayInsertNew(QxJsonArray *array, size_t index, QxJsonValue *value)
+int QxJsonArray_insertNew(QxJsonArray *array, size_t index, QxJsonValue *value)
 {
 	Node *node;
 	size_t currentIndex;
@@ -278,7 +278,7 @@ int qxJsonArrayInsertNew(QxJsonArray *array, size_t index, QxJsonValue *value)
 	return -1;
 }
 
-QxJsonValue const *qxJsonArrayGet(QxJsonArray *array, size_t index)
+QxJsonValue const *QxJsonArray_get(QxJsonArray *array, size_t index)
 {
 	if (array && array->node)
 	{

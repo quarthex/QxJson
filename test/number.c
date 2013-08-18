@@ -32,18 +32,18 @@ int main(void)
 
 	for (; index != ARRAY_SIZE(numbers); ++index)
 	{
-		value = qxJsonNumberNew(numbers[index]);
+		value = QxJsonNumber_new(numbers[index]);
 		expect_not_null(value);
 		expect_ok(QX_JSON_IS_NUMBER(value));
 		number = QX_JSON_NUMBER(value);
 		expect_not_null(number);
-		expect_zero(compareNumbers(qxJsonNumberValue(number), numbers[index]));
-		qxJsonValueUnref(value);
+		expect_zero(compareNumbers(QxJsonNumber_value(number), numbers[index]));
+		QxJsonValue_decref(value);
 	}
 
-	value = qxJsonNumberNew(-0.);
-	expect_not_zero(compareNumbers(qxJsonNumberValue(QX_JSON_NUMBER(value)), 0.));
-	qxJsonValueUnref(value);
+	value = QxJsonNumber_new(-0.);
+	expect_not_zero(compareNumbers(QxJsonNumber_value(QX_JSON_NUMBER(value)), 0.));
+	QxJsonValue_decref(value);
 
 	return EXIT_SUCCESS;
 }

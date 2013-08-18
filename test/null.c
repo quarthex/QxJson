@@ -12,9 +12,9 @@
 
 int main(void)
 {
-	QxJsonValue *const value = qxJsonNullNew();
+	QxJsonValue *const value = QxJsonNull_new();
 	expect_not_null(value);
 	expect_ok(QX_JSON_IS_NULL(value));
-	qxJsonValueUnref(value);
+	QxJsonValue_decref(value);
 	return EXIT_SUCCESS;
 }

@@ -16,16 +16,16 @@ int main(void)
 	QxJsonString *string;
 	QxJsonValue *value;
 
-	value = qxJsonStringNew(NULL, 5);
+	value = QxJsonString_new(NULL, 5);
 	expect_null(value);
 
-	value = qxJsonStringNew(L"Hello", 5);
+	value = QxJsonString_new(L"Hello", 5);
 	expect_ok(QX_JSON_IS_STRING(value));
 	string = QX_JSON_STRING(value);
 	expect_not_null(string);
-	expect_int_equal(qxJsonStringSize(string), 5);
-	expect_zero(memcmp(qxJsonStringData(string), L"Hello", 5 * sizeof(wchar_t)));
+	expect_int_equal(QxJsonString_size(string), 5);
+	expect_zero(memcmp(QxJsonString_data(string), L"Hello", 5 * sizeof(wchar_t)));
 
-	qxJsonValueUnref(value);
+	QxJsonValue_decref(value);
 	return EXIT_SUCCESS;
 }

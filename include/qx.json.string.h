@@ -32,7 +32,7 @@ typedef wchar_t const *qx_json_string_t;
  * @warning If @c data is a null pointer, a null pointer is returned.
  * @warning An overvalued @c size may lead to unexpected results.
  */
-QX_API QxJsonValue *qxJsonStringNew(qx_json_string_t data, size_t size);
+QX_API QxJsonValue *QxJsonString_new(qx_json_string_t data, size_t size);
 
 /**
  * @brief Get the native data of the string.
@@ -40,7 +40,7 @@ QX_API QxJsonValue *qxJsonStringNew(qx_json_string_t data, size_t size);
  * @return The native data of the input string.
  * @warning If the input string is a null pointer, a null pointer is returned.
  */
-QX_API qx_json_string_t qxJsonStringData(QxJsonString const *string);
+QX_API qx_json_string_t QxJsonString_data(QxJsonString const *string);
 
 /**
  * @brief Get the size of the string.
@@ -48,6 +48,6 @@ QX_API qx_json_string_t qxJsonStringData(QxJsonString const *string);
  * @return The size of the input string.
  * @warning If the input string is a null pointer, 0 is returned.
  */
-QX_API size_t qxJsonStringSize(QxJsonString const *string);
+QX_API size_t QxJsonString_size(QxJsonString const *string);
 
 #endif /* _H_QX_JSON_STRING */

@@ -29,43 +29,43 @@ static void *factory(QxJsonValueSpec const *spec, void *userPtr)
 	switch (spec->type)
 	{
 	case QxJsonValueTypeString:
-		value = qxJsonStringNew(spec->spec.string.data, spec->spec.string.size);
+		value = QxJsonString_new(spec->spec.string.data, spec->spec.string.size);
 		break;
 
 	case QxJsonValueTypeNumber:
-		value = qxJsonNumberNew(wcstod(spec->spec.number.data, NULL));
+		value = QxJsonNumber_new(wcstod(spec->spec.number.data, NULL));
 		break;
 
 	case QxJsonValueTypeFalse:
-		value = qxJsonFalseNew();
+		value = QxJsonFalse_new();
 		break;
 
 	case QxJsonValueTypeTrue:
-		value = qxJsonTrueNew();
+		value = QxJsonTrue_new();
 		break;
 
 	case QxJsonValueTypeNull:
-		value = qxJsonNullNew();
+		value = QxJsonNull_new();
 		break;
 
 	case QxJsonValueTypeArray:
-		value = qxJsonArrayNew();
+		value = QxJsonArray_new();
 
 		for (index = 0; index < spec->spec.array.size; ++index)
-			qxJsonArrayAppendNew(QX_JSON_ARRAY(value), (QxJsonValue *)spec->spec.array.values[index]);
+			QxJsonArray_appendNew(QX_JSON_ARRAY(value), (QxJsonValue *)spec->spec.array.values[index]);
 
 		break;
 
 	case QxJsonValueTypeObject:
-		value = qxJsonObjectNew();
+		value = QxJsonObject_new();
 
 		for (index = 0; index < spec->spec.object.size; ++index)
 		{
-			qxJsonObjectSet(QX_JSON_OBJECT(value),
+			QxJsonObject_set(QX_JSON_OBJECT(value),
 				QX_JSON_STRING((QxJsonValue *)spec->spec.object.keys[index]),
 				(QxJsonValue *)spec->spec.object.values[index]);
-			qxJsonValueUnref((QxJsonValue *)spec->spec.object.keys[index]);
-			qxJsonValueUnref((QxJsonValue *)spec->spec.object.values[index]);
+			QxJsonValue_decref((QxJsonValue *)spec->spec.object.keys[index]);
+			QxJsonValue_decref((QxJsonValue *)spec->spec.object.values[index]);
 		}
 
 		break;
@@ -100,8 +100,8 @@ static void testArray(void)
 
 	expect_not_null(root);
 	expect_ok(QX_JSON_IS_ARRAY(root));
-	expect_zero(qxJsonArraySize(QX_JSON_ARRAY(root)));
-	qxJsonValueUnref(root);
+	expect_zero(QxJsonArray_size(QX_JSON_ARRAY(root)));
+	QxJsonValue_decref(root);
 }
 
 static void testFalse(void)
@@ -120,7 +120,7 @@ static void testFalse(void)
 
 	expect_not_null(root);
 	expect_ok(QX_JSON_IS_FALSE(root));
-	qxJsonValueUnref(root);
+	QxJsonValue_decref(root);
 }
 
 static void testNull(void)
@@ -139,7 +139,7 @@ static void testNull(void)
 
 	expect_not_null(root);
 	expect_ok(QX_JSON_IS_NULL(root));
-	qxJsonValueUnref(root);
+	QxJsonValue_decref(root);
 }
 
 static void testNumber(void)
@@ -160,8 +160,8 @@ static void testNumber(void)
 
 	expect_not_null(root);
 	expect_ok(QX_JSON_IS_NUMBER(root));
-	expect_double_equal(qxJsonNumberValue(QX_JSON_NUMBER(root)), 3.1415);
-	qxJsonValueUnref(root);
+	expect_double_equal(QxJsonNumber_value(QX_JSON_NUMBER(root)), 3.1415);
+	QxJsonValue_decref(root);
 }
 
 static void testObject(void)
@@ -198,8 +198,8 @@ static void testObject(void)
 
 	expect_not_null(root);
 	expect_ok(QX_JSON_IS_OBJECT(root));
-	expect_int_equal(qxJsonObjectSize(QX_JSON_OBJECT(root)), 1);
-	qxJsonValueUnref(root);
+	expect_int_equal(QxJsonObject_size(QX_JSON_OBJECT(root)), 1);
+	QxJsonValue_decref(root);
 }
 
 static void testString(void)
@@ -220,9 +220,9 @@ static void testString(void)
 
 	expect_not_null(root);
 	expect_ok(QX_JSON_IS_STRING(root));
-	expect_int_equal(qxJsonStringSize(QX_JSON_STRING(root)), 6);
-	expect_wstr_equal(qxJsonStringData(QX_JSON_STRING(root)), L"string");
-	qxJsonValueUnref(root);
+	expect_int_equal(QxJsonString_size(QX_JSON_STRING(root)), 6);
+	expect_wstr_equal(QxJsonString_data(QX_JSON_STRING(root)), L"string");
+	QxJsonValue_decref(root);
 }
 
 static void testTrue(void)
@@ -241,7 +241,7 @@ static void testTrue(void)
 
 	expect_not_null(root);
 	expect_ok(QX_JSON_IS_TRUE(root));
-	qxJsonValueUnref(root);
+	QxJsonValue_decref(root);
 }
 
 int main(void)

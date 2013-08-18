@@ -17,22 +17,22 @@ int main(void)
 	QxJsonObject *object;
 	QxJsonString *key;
 
-	value = qxJsonObjectNew();
+	value = QxJsonObject_new();
 	expect_not_null(value);
 	expect_ok(QX_JSON_IS_OBJECT(value));
 	object = QX_JSON_OBJECT(value);
 	expect_not_null(object);
 
-	value = qxJsonStringNew(L"Test", 4);
+	value = QxJsonString_new(L"Test", 4);
 	key = QX_JSON_STRING(value);
-	value = qxJsonStringNew(L"qx", 2);
-	expect_zero(qxJsonObjectSet(object, key, value));
-	expect_int_equal(qxJsonObjectSize(object), 1);
-	expect_zero(qxJsonObjectUnset(object, key));
-	expect_int_equal(qxJsonObjectSize(object), 0);
+	value = QxJsonString_new(L"qx", 2);
+	expect_zero(QxJsonObject_set(object, key, value));
+	expect_int_equal(QxJsonObject_size(object), 1);
+	expect_zero(QxJsonObject_unset(object, key));
+	expect_int_equal(QxJsonObject_size(object), 0);
 
-	qxJsonValueUnref((QxJsonValue *)(key));
-	qxJsonValueUnref(value);
-	qxJsonValueUnref((QxJsonValue *)(object));
+	QxJsonValue_decref((QxJsonValue *)(key));
+	QxJsonValue_decref(value);
+	QxJsonValue_decref((QxJsonValue *)(object));
 	return EXIT_SUCCESS;
 }

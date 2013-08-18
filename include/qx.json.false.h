@@ -21,6 +21,6 @@ typedef struct QxJsonFalse QxJsonFalse;
  * @brief Create a new false value.
  * @return A JavaScript false value.
  */
-QX_API QxJsonValue *qxJsonFalseNew(void);
+QX_API QxJsonValue *QxJsonFalse_new(void);
 
 #endif /* _H_QX_JSON_FALSE */

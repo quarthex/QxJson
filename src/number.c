@@ -13,7 +13,7 @@
 
 static void finalize(QxJsonValue *value)
 {
-	QX_UNUSED(value);
+	(void)value;
 	return;
 }
 
@@ -33,7 +33,7 @@ struct QxJsonNumber
 	qx_json_number_t number;
 };
 
-QxJsonValue *qxJsonNumberNew(qx_json_number_t number)
+QxJsonValue *QxJsonNumber_new(qx_json_number_t number)
 {
 	QxJsonNumber *const instance = ALLOC(QxJsonNumber);
 
@@ -47,7 +47,7 @@ QxJsonValue *qxJsonNumberNew(qx_json_number_t number)
 	return &instance->parent;
 }
 
-qx_json_number_t qxJsonNumberValue(QxJsonNumber const *number)
+qx_json_number_t QxJsonNumber_value(QxJsonNumber const *number)
 {
 	if (number)
 	{

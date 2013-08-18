@@ -30,8 +30,8 @@ struct QxJsonObject
 
 static void freeNode(Node *node)
 {
-	qxJsonValueUnref((QxJsonValue *)(node->key));
-	qxJsonValueUnref(node->value);
+	QxJsonValue_decref((QxJsonValue *)(node->key));
+	QxJsonValue_decref(node->value);
 	free(node);
 	return;
 }
@@ -66,7 +66,7 @@ static QxJsonValueClass const klass =
 	QxJsonValueTypeObject
 };
 
-QxJsonValue *qxJsonObjectNew(void)
+QxJsonValue *QxJsonObject_new(void)
 {
 	QxJsonObject *const instance = ALLOC(QxJsonObject);
 
@@ -89,18 +89,18 @@ static int compareKey(QxJsonString *first, QxJsonString *last)
 		return 0;
 	}
 
-	firstSize = qxJsonStringSize(first);
-	lastSize = qxJsonStringSize(last);
+	firstSize = QxJsonString_size(first);
+	lastSize = QxJsonString_size(last);
 
 	if (firstSize != lastSize)
 	{
 		return (int)firstSize - (int)lastSize;
 	}
 
-	return memcmp(qxJsonStringData(first), qxJsonStringData(last), firstSize);
+	return memcmp(QxJsonString_data(first), QxJsonString_data(last), firstSize);
 }
 
-int qxJsonObjectSet(QxJsonObject *object, QxJsonString *key,
+int QxJsonObject_set(QxJsonObject *object, QxJsonString *key,
 					QxJsonValue *value)
 {
 	int cmp;
@@ -171,17 +171,17 @@ int qxJsonObjectSet(QxJsonObject *object, QxJsonString *key,
 		if (object->node->key)
 		{
 			/* Existing key */
-			qxJsonValueUnref(object->node->value);
+			QxJsonValue_decref(object->node->value);
 			object->node->value = value;
-			qxJsonValueRef(value);
+			QxJsonValue_incref(value);
 		}
 		else
 		{
 			/* New key */
 			object->node->key = key;
-			qxJsonValueRef((QxJsonValue *)key);
+			QxJsonValue_incref((QxJsonValue *)key);
 			object->node->value = value;
-			qxJsonValueRef(value);
+			QxJsonValue_incref(value);
 		}
 
 		return 0;
@@ -190,7 +190,7 @@ int qxJsonObjectSet(QxJsonObject *object, QxJsonString *key,
 	return -1;
 }
 
-int qxJsonObjectUnset(QxJsonObject *object, QxJsonString *key)
+int QxJsonObject_unset(QxJsonObject *object, QxJsonString *key)
 {
 	int cmp;
 	Node *found;
@@ -246,7 +246,7 @@ int qxJsonObjectUnset(QxJsonObject *object, QxJsonString *key)
 	return -1;
 }
 
-size_t qxJsonObjectSize(QxJsonObject *object)
+size_t QxJsonObject_size(QxJsonObject *object)
 {
 	size_t size;
 	Node *node;

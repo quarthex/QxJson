@@ -19,7 +19,7 @@ typedef struct QxJsonValue QxJsonValue;
  * @brief Increment the reference counter of a value.
  * @param[in|out] value The value.
  */
-QX_API void qxJsonValueRef(QxJsonValue *value);
+QX_API void QxJsonValue_incref(QxJsonValue *value);
 
 /**
  * @brief Decrement the reference counter of a value.
@@ -27,14 +27,14 @@ QX_API void qxJsonValueRef(QxJsonValue *value);
  *
  * When the reference counter reach zero, the value is freed.
  */
-QX_API void qxJsonValueUnref(QxJsonValue *value);
+QX_API void QxJsonValue_decref(QxJsonValue *value);
 
 /**
  * @brief Get the type of the value.
  * @param[in] The value.
  * @return The unique identifier of the type of the value.
  */
-QX_API QxJsonValueType qxJsonValueType(QxJsonValue const *value);
+QX_API QxJsonValueType QxJsonValue_type(QxJsonValue const *value);
 
 /**
  * @brief Test that a JSON value has the requiered type.
@@ -43,7 +43,7 @@ QX_API QxJsonValueType qxJsonValueType(QxJsonValue const *value);
  * @return 0 if the type has not the requiered type.
  */
 #define QX_JSON_IS(value, type) \
-	(qxJsonValueType(value) == QxJsonValueType##type)
+	(QxJsonValue_type(value) == QxJsonValueType##type)
 
 /**
  * @brief Dynamically cast a value into the given type.

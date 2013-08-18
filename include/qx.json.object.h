@@ -23,7 +23,7 @@ typedef struct QxJsonObject QxJsonObject;
  * @brief Create a new object value.
  * @return A JavaScript object value.
  */
-QX_API QxJsonValue *qxJsonObjectNew(void);
+QX_API QxJsonValue *QxJsonObject_new(void);
 
 /**
  * @brief Associate a value to a key in the object.
@@ -33,7 +33,7 @@ QX_API QxJsonValue *qxJsonObjectNew(void);
  * @return 0 if the value have successfully been associated to the key.
  * @warning The internal reference counter of the value is not incremented.
  */
-QX_API int qxJsonObjectSet(QxJsonObject *object, QxJsonString *key,
+QX_API int QxJsonObject_set(QxJsonObject *object, QxJsonString *key,
 							QxJsonValue * value);
 
 /**
@@ -42,13 +42,13 @@ QX_API int qxJsonObjectSet(QxJsonObject *object, QxJsonString *key,
  * @param[in] key The key to be removed.
  * @return 0 if the key have successfully be removed or if it did not exists.
  */
-QX_API int qxJsonObjectUnset(QxJsonObject *object, QxJsonString *key);
+QX_API int QxJsonObject_unset(QxJsonObject *object, QxJsonString *key);
 
 /**
  * @brief Return the key count of the object.
  * @param[in] object The object.
  * @return The amount of keys the object handles.
  */
-QX_API size_t qxJsonObjectSize(QxJsonObject *object);
+QX_API size_t QxJsonObject_size(QxJsonObject *object);
 
 #endif /* _H_QX_JSON_OBJECT */

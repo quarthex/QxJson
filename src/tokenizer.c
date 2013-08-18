@@ -680,13 +680,13 @@ static int feedNumberExpInteger(QxJsonTokenizer *self, wchar_t character)
 
 static int endDefault(QxJsonTokenizer *self)
 {
-	QX_UNUSED(self);
+	(void)self;
 	return 0;
 }
 
 static int endUnexpected(QxJsonTokenizer *self)
 {
-	QX_UNUSED(self);
+	(void)self;
 	return -1;
 }
 

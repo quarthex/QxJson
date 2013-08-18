@@ -13,7 +13,7 @@
 
 static void finalize(QxJsonValue *value)
 {
-	QX_UNUSED(value);
+	(void)value;
 	return;
 }
 
@@ -23,7 +23,7 @@ static QxJsonValueClass const klass =
 	QxJsonValueTypeNull
 };
 
-QxJsonValue *qxJsonNullNew(void)
+QxJsonValue *QxJsonNull_new(void)
 {
 	QxJsonValue *const instance = ALLOC(QxJsonValue);
 

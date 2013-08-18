@@ -42,7 +42,7 @@ static QxJsonValueClass const klass =
 	QxJsonValueTypeString
 };
 
-QxJsonValue *qxJsonStringNew(qx_json_string_t data, size_t size)
+QxJsonValue *QxJsonString_new(qx_json_string_t data, size_t size)
 {
 	QxJsonString *instance;
 
@@ -65,12 +65,12 @@ QxJsonValue *qxJsonStringNew(qx_json_string_t data, size_t size)
 	return NULL;
 }
 
-qx_json_string_t qxJsonStringData(QxJsonString const *string)
+qx_json_string_t QxJsonString_data(QxJsonString const *string)
 {
 	return string ? string->data : NULL;
 }
 
-size_t qxJsonStringSize(QxJsonString const *string)
+size_t QxJsonString_size(QxJsonString const *string)
 {
 	return string ? string->size : 0;
 }

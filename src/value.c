@@ -10,14 +10,14 @@
 #include "../include/qx.json.value.h"
 #include "value.private.h"
 
-void qxJsonValueRef(QxJsonValue *value)
+void QxJsonValue_incref(QxJsonValue *value)
 {
 	assert(value != NULL);
 	++value->ref;
 	return;
 }
 
-void qxJsonValueUnref(QxJsonValue *value)
+void QxJsonValue_decref(QxJsonValue *value)
 {
 	assert(value != NULL);
 
@@ -35,7 +35,7 @@ void qxJsonValueUnref(QxJsonValue *value)
 	return;
 }
 
-QxJsonValueType qxJsonValueType(QxJsonValue const *value)
+QxJsonValueType QxJsonValue_type(QxJsonValue const *value)
 {
 	assert(value != NULL);
 	assert(value->klass != NULL);

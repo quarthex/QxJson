@@ -21,6 +21,6 @@ typedef struct QxJsonNull QxJsonNull;
  * @brief Create a new null value.
  * @return A JavaScript null value.
  */
-QX_API QxJsonValue *qxJsonNullNew(void);
+QX_API QxJsonValue *QxJsonNull_new(void);
 
 #endif /* _H_QX_JSON_NULL */

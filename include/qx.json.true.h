@@ -21,6 +21,6 @@ typedef struct QxJsonTrue QxJsonTrue;
  * @brief Create a new true value.
  * @return A JavaScript true value.
  */
-QX_API QxJsonValue *qxJsonTrueNew(void);
+QX_API QxJsonValue *QxJsonTrue_new(void);
 
 #endif /* _H_QX_JSON_TRUE */

@@ -27,7 +27,7 @@ typedef double qx_json_number_t;
  * @brief Create a new number value.
  * @return A JavaScript number value.
  */
-QX_API QxJsonValue *qxJsonNumberNew(qx_json_number_t number);
+QX_API QxJsonValue *QxJsonNumber_new(qx_json_number_t number);
 
 /**
  * @brief Get the native value of the number.
@@ -35,6 +35,6 @@ QX_API QxJsonValue *qxJsonNumberNew(qx_json_number_t number);
  * @return The native value of the input number.
  * @warning If the input number is a null pointer, 0 is returned.
  */
-QX_API qx_json_number_t qxJsonNumberValue(QxJsonNumber const *number);
+QX_API qx_json_number_t QxJsonNumber_value(QxJsonNumber const *number);
 
 #endif /* _H_QX_JSON_NUMBER */
