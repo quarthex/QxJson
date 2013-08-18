@@ -24,7 +24,7 @@ struct Node
 struct QxJsonArray
 {
 	QxJsonValue parent;
-	Node *node;
+	Node head;
 };
 
 static void finalize(QxJsonValue *value)
@@ -35,26 +35,11 @@ static void finalize(QxJsonValue *value)
 	assert(value != NULL);
 	assert(QX_JSON_IS_ARRAY(value));
 
-	if (array->node)
+	for (node = array->head.next; node != &array->head;)
 	{
-		while (array->node->previous)
-		{
-			node = array->node->previous;
-			array->node->previous = node->previous;
-			QxJsonValue_decref(node->value);
-			free(node);
-		}
-
-		while (array->node->next)
-		{
-			node = array->node->next;
-			array->node->next = node->next;
-			QxJsonValue_decref(node->value);
-			free(node);
-		}
-
-		QxJsonValue_decref(array->node->value);
-		free(array->node);
+		QxJsonValue_decref(node->value);
+		node = node->next;
+		free(node->previous);
 	}
 
 	return;
@@ -74,7 +59,8 @@ QxJsonValue *QxJsonArray_new(void)
 	{
 		instance->parent.klass = &klass;
 		instance->parent.ref = 0;
-		instance->node = NULL;
+		instance->head.next = &instance->head;
+		instance->head.previous = &instance->head;
 		return &instance->parent;
 	}
 
@@ -84,20 +70,11 @@ QxJsonValue *QxJsonArray_new(void)
 size_t QxJsonArray_size(QxJsonArray const *array)
 {
 	size_t size = 0;
-	Node *node;
+	Node *node = array->head.next;
 
-	if (array && array->node)
+	while (node != &array->head)
 	{
-		for (node = array->node; node->previous; node = node->previous)
-		{
-			++size;
-		}
-
-		for (node = array->node; node->next; node = node->next)
-		{
-			++size;
-		}
-
+		node = node->next;
 		++size;
 	}
 
@@ -117,39 +94,21 @@ int QxJsonArray_append(QxJsonArray *array, QxJsonValue *value)
 
 int QxJsonArray_appendNew(QxJsonArray *array, QxJsonValue *value)
 {
+	Node *node;
+
 	if (array && value && (&array->parent != value))
 	{
-		if (array->node)
-		{
-			while (array->node->next)
-			{
-				array->node = array->node->next;
-			}
+		node = ALLOC(Node);
 
-			array->node->next = ALLOC(Node);
+		if (!node)
+			return -1;
 
-			if (array->node->next)
-			{
-				array->node->next->previous = array->node;
-				array->node = array->node->next;
-			}
-		}
-		else
-		{
-			array->node = ALLOC(Node);
-
-			if (array->node)
-			{
-				array->node->previous = NULL;
-			}
-		}
-
-		if (array->node)
-		{
-			array->node->next = NULL;
-			array->node->value = value;
-			return 0;
-		}
+		node->value = value;
+		node->next = &array->head;
+		node->previous = array->head.previous;
+		node->next->previous = node;
+		node->previous->next = node;
+		return 0;
 	}
 
 	return -1;
@@ -162,7 +121,24 @@ int QxJsonArray_prepend(QxJsonArray *array, QxJsonValue *value)
 
 int QxJsonArray_prependNew(QxJsonArray *array, QxJsonValue *value)
 {
-	return QxJsonArray_insertNew(array, 0, value);
+	Node *node;
+
+	if (array && value && (&array->parent != value))
+	{
+		node = ALLOC(Node);
+
+		if (!node)
+			return -1;
+
+		node->value = value;
+		node->next = array->head.next;
+		node->previous = &array->head;
+		node->next->previous = node;
+		node->previous->next = node;
+		return 0;
+	}
+
+	return -1;
 }
 
 int QxJsonArray_insert(QxJsonArray *array, size_t index,  QxJsonValue *value)
@@ -178,100 +154,34 @@ int QxJsonArray_insert(QxJsonArray *array, size_t index,  QxJsonValue *value)
 
 int QxJsonArray_insertNew(QxJsonArray *array, size_t index, QxJsonValue *value)
 {
-	Node *node;
-	size_t currentIndex;
+	Node *next, *node;
+
+	if (!index)
+		return QxJsonArray_prependNew(array, value);
 
 	if (array && value && (&array->parent != value))
 	{
-		if (array->node)
+		next = array->head.next;
+
+		while (index && next != &array->head)
 		{
-			/* Compute the current index. */
-			node = array->node;
+			--index;
+			next = next->next;
+		}
 
-			for (currentIndex = 0; node->previous; ++currentIndex)
-			{
-				node = node->previous;
-			}
-
-			/* Search the shortest path to reach the wanted index. */
-			if ((index < currentIndex) && ((currentIndex - index) < index))
-			{
-				/* The wanted node is just before the current one. */
-				for (; currentIndex != index; --currentIndex)
-				{
-					array->node = array->node->previous;
-				}
-			}
-			else
-			{
-				if (index < currentIndex)
-				{
-					/*
-					 * The wanted node is closer to the first node than to the
-					 * current one.
-					 * It will be reached in `index` nodes.
-					 */
-					array->node = node;
-				}
-				else
-				{
-					/*
-					 * The `currentIndex` first steps are cached and do not
-					 * need to be processed.
-					 */
-					index -= currentIndex;
-				}
-
-				while (index && array->node->next)
-				{
-					array->node = array->node->next;
-					++currentIndex;
-				}
-			}
-
+		if (!index)
+		{
 			node = ALLOC(Node);
 
 			if (node)
 			{
-				if (index)
-				{
-					node->previous = array->node;
-					node->next = NULL;
-				}
-				else
-				{
-					node->previous = array->node->previous;
-					node->next = array->node;
-				}
-
-				if (node->previous)
-				{
-					node->previous->next = node;
-				}
-
-				if (node->next)
-				{
-					node->next->previous = node;
-				}
-
-				array->node = node;
+				node->value = value;
+				node->next = next;
+				node->previous = next->previous;
+				node->next->previous = node;
+				node->previous->next = node;
+				return 0;
 			}
-		}
-		else
-		{
-			array->node = ALLOC(Node);
-
-			if (array->node)
-			{
-				array->node->previous = NULL;
-				array->node->next = NULL;
-			}
-		}
-
-		if (array->node)
-		{
-			array->node->value = value;
-			return 0;
 		}
 	}
 
@@ -280,22 +190,21 @@ int QxJsonArray_insertNew(QxJsonArray *array, size_t index, QxJsonValue *value)
 
 QxJsonValue const *QxJsonArray_get(QxJsonArray *array, size_t index)
 {
-	if (array && array->node)
-	{
-		while (array->node->previous)
-		{
-			array->node = array->node->previous;
-		}
+	Node *node;
 
-		while (index > 0 && array->node->next)
+	if (array && array->head.next != &array->head)
+	{
+		node = array->head.next;
+
+		while (index && node != &array->head)
 		{
 			--index;
-			array->node = array->node->next;
+			node = node->next;
 		}
 
 		if (!index)
 		{
-			return array->node->value;
+			return node->value;
 		}
 	}
 
