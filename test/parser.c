@@ -29,11 +29,11 @@ static void *factory(QxJsonValueSpec const *spec, void *userPtr)
 	switch (spec->type)
 	{
 	case QxJsonValueTypeString:
-		value = QxJsonString_new(spec->spec.string.data, spec->spec.string.size);
+		value = QxJsonString_new(spec->data.string.data, spec->data.string.size);
 		break;
 
 	case QxJsonValueTypeNumber:
-		value = QxJsonNumber_new(wcstod(spec->spec.number.data, NULL));
+		value = QxJsonNumber_new(wcstod(spec->data.number.data, NULL));
 		break;
 
 	case QxJsonValueTypeFalse:
@@ -51,21 +51,21 @@ static void *factory(QxJsonValueSpec const *spec, void *userPtr)
 	case QxJsonValueTypeArray:
 		value = QxJsonArray_new();
 
-		for (index = 0; index < spec->spec.array.size; ++index)
-			QxJsonArray_appendNew(QX_JSON_ARRAY(value), (QxJsonValue *)spec->spec.array.values[index]);
+		for (index = 0; index < spec->data.array.size; ++index)
+			QxJsonArray_appendNew(QX_JSON_ARRAY(value), (QxJsonValue *)spec->data.array.values[index]);
 
 		break;
 
 	case QxJsonValueTypeObject:
 		value = QxJsonObject_new();
 
-		for (index = 0; index < spec->spec.object.size; ++index)
+		for (index = 0; index < spec->data.object.size; ++index)
 		{
 			QxJsonObject_set(QX_JSON_OBJECT(value),
-				QX_JSON_STRING((QxJsonValue *)spec->spec.object.keys[index]),
-				(QxJsonValue *)spec->spec.object.values[index]);
-			QxJsonValue_decref((QxJsonValue *)spec->spec.object.keys[index]);
-			QxJsonValue_decref((QxJsonValue *)spec->spec.object.values[index]);
+				QX_JSON_STRING((QxJsonValue *)spec->data.object.keys[index]),
+				(QxJsonValue *)spec->data.object.values[index]);
+			QxJsonValue_decref((QxJsonValue *)spec->data.object.keys[index]);
+			QxJsonValue_decref((QxJsonValue *)spec->data.object.values[index]);
 		}
 
 		break;

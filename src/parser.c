@@ -225,8 +225,8 @@ static int feedObjectBegin(QxJsonParser *self, QxJsonToken const *token)
 	switch (token->type)
 	{
 	case QxJsonTokenString:
-		self->spec.spec.string.data = token->data;
-		self->spec.spec.string.size = token->size;
+		self->spec.data.string.data = token->data;
+		self->spec.data.string.size = token->size;
 		key = Parser_createValue(self, QxJsonValueTypeString);
 
 		if (!key)
@@ -311,8 +311,8 @@ static int feedObjectVSeparator(QxJsonParser *self, QxJsonToken const *token)
 
 	if (token->type == QxJsonTokenString)
 	{
-		self->spec.spec.string.data = token->data;
-		self->spec.spec.string.size = token->size;
+		self->spec.data.string.data = token->data;
+		self->spec.data.string.size = token->size;
 		key = Parser_createValue(self, QxJsonValueTypeString);
 
 		if (!key)
@@ -336,13 +336,13 @@ static void *Parser_createValueFromToken(QxJsonParser *self, QxJsonToken const *
 	switch (token->type)
 	{
 	case QxJsonTokenString:
-		self->spec.spec.string.data = token->data;
-		self->spec.spec.string.size = token->size;
+		self->spec.data.string.data = token->data;
+		self->spec.data.string.size = token->size;
 		return Parser_createValue(self, QxJsonValueTypeString);
 
 	case QxJsonTokenNumber:
-		self->spec.spec.string.data = token->data;
-		self->spec.spec.string.size = token->size;
+		self->spec.data.string.data = token->data;
+		self->spec.data.string.size = token->size;
 		return Parser_createValue(self, QxJsonValueTypeNumber);
 
 	case QxJsonTokenFalse:
@@ -402,16 +402,16 @@ static int Parser_pop(QxJsonParser *self)
 	/* Close the array/object */
 	if (item->isObject)
 	{
-		self->spec.spec.object.keys = item->value.object.keys;
-		self->spec.spec.object.values = item->value.object.values;
-		self->spec.spec.object.size = item->value.object.size;
+		self->spec.data.object.keys = item->value.object.keys;
+		self->spec.data.object.values = item->value.object.values;
+		self->spec.data.object.size = item->value.object.size;
 		value = Parser_createValue(self, QxJsonValueTypeObject);
 		Object_destroy(&item->value.object);
 	}
 	else
 	{
-		self->spec.spec.array.values = item->value.array.values;
-		self->spec.spec.array.size = item->value.array.size;
+		self->spec.data.array.values = item->value.array.values;
+		self->spec.data.array.size = item->value.array.size;
 		value = Parser_createValue(self, QxJsonValueTypeArray);
 		Array_destroy(&item->value.array);
 	}

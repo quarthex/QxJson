@@ -47,7 +47,7 @@ struct QxJsonValueSpec
 		struct { wchar_t const *data; size_t size; } number;
 		struct { void **values; size_t size; } array;
 		struct { void **keys; void **values; size_t size; } object;
-	} spec;
+	} data;
 };
 
 /**

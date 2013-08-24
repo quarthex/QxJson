@@ -36,9 +36,9 @@ struct QxJsonValue
 	QxJsonValueClass const *klass;
 
 	/**
-	 * The reference counter.
+	 * @brief The reference counter.
 	 */
-	size_t ref;
+	unsigned long int ref;
 };
 
 #endif /* _H_QX_JSON_VALUE_PRIVATE_H */
