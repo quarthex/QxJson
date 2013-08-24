@@ -1,31 +1,29 @@
 /**
  * @file string.c
- * @brief Testing source file of the QxJsonString class.
+ * @brief Testing source file of strings handling in the QxJsonValue class.
  * @author Romain DEOUX
  */
 
 #include <stdlib.h>
 #include <string.h>
 
-#include <qx.json.string.h>
+#include <qx.json.value.h>
 
 #include "expect.h"
 
 int main(void)
 {
-	QxJsonString *string;
-	QxJsonValue *value;
+	QxJsonValue *string;
 
-	value = QxJsonString_new(NULL, 5);
-	expect_null(value);
+	string = QxJsonValue_stringNew(NULL, 5);
+	expect_null(string);
 
-	value = QxJsonString_new(L"Hello", 5);
-	expect_ok(QX_JSON_IS_STRING(value));
-	string = QX_JSON_STRING(value);
+	string = QxJsonValue_stringNew(L"Hello", 5);
 	expect_not_null(string);
-	expect_int_equal(QxJsonString_size(string), 5);
-	expect_zero(memcmp(QxJsonString_data(string), L"Hello", 5 * sizeof(wchar_t)));
+	expect_ok(QX_JSON_IS_STRING(string));
+	expect_int_equal(QxJsonValue_size(string), 5);
+	expect_zero(memcmp(QxJsonValue_stringValue(string), L"Hello", 5 * sizeof(wchar_t)));
 
-	QxJsonValue_decref(value);
+	QxJsonValue_decref(string);
 	return EXIT_SUCCESS;
 }

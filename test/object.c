@@ -1,38 +1,32 @@
 /**
  * @file object.c
- * @brief Testing source file of the QxJsonObject class.
+ * @brief Testing source file of objects handling in the QxJsonValue class.
  * @author Romain DEOUX
  */
 
 #include <stdlib.h>
 
-#include <qx.json.object.h>
-#include <qx.json.string.h>
+#include <qx.json.value.h>
 
 #include "expect.h"
 
 int main(void)
 {
-	QxJsonValue *value;
-	QxJsonObject *object;
-	QxJsonString *key;
+	QxJsonValue *object, *key, *value;
 
-	value = QxJsonObject_new();
-	expect_not_null(value);
-	expect_ok(QX_JSON_IS_OBJECT(value));
-	object = QX_JSON_OBJECT(value);
+	object = QxJsonValue_objectNew();
 	expect_not_null(object);
+	expect_ok(QX_JSON_IS_OBJECT(object));
 
-	value = QxJsonString_new(L"Test", 4);
-	key = QX_JSON_STRING(value);
-	value = QxJsonString_new(L"qx", 2);
-	expect_zero(QxJsonObject_set(object, key, value));
-	expect_int_equal(QxJsonObject_size(object), 1);
-	expect_zero(QxJsonObject_unset(object, key));
-	expect_int_equal(QxJsonObject_size(object), 0);
+	key = QxJsonValue_stringNew(L"Test", 4);
+	value = QxJsonValue_stringNew(L"qx", 2);
+	expect_zero(QxJsonValue_objectSet(object, key, value));
+	expect_int_equal(QxJsonValue_size(object), 1);
+	expect_zero(QxJsonValue_objectUnset(object, key));
+	expect_int_equal(QxJsonValue_size(object), 0);
 
-	QxJsonValue_decref((QxJsonValue *)(key));
+	QxJsonValue_decref(key);
 	QxJsonValue_decref(value);
-	QxJsonValue_decref((QxJsonValue *)(object));
+	QxJsonValue_decref(object);
 	return EXIT_SUCCESS;
 }
