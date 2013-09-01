@@ -64,13 +64,13 @@ typedef void *(*QxJsonValueFactory)(QxJsonValueSpec const *spec, void *userPtr);
  * If the factory return a NULL value, the parser fails.
  * The parser is not responsible of the memory managment of the created values.
  */
-QxJsonParser *QxJsonParser_new(QxJsonValueFactory factory, void *userPtr);
+QX_API QxJsonParser *QxJsonParser_new(QxJsonValueFactory factory, void *userPtr);
 
 /**
  * @brief Destroy a parser.
  * @param self The instance to be destroyed.
  */
-void QxJsonParser_delete(QxJsonParser *self);
+QX_API void QxJsonParser_delete(QxJsonParser *self);
 
 /**
  * @brief Feed the parser with a new token.
@@ -78,6 +78,6 @@ void QxJsonParser_delete(QxJsonParser *self);
  * @param token The new token.
  * @return 0 on success.
  */
-int QxJsonParser_feed(QxJsonParser *self, QxJsonToken const *token);
+QX_API int QxJsonParser_feed(QxJsonParser *self, QxJsonToken const *token);
 
 #endif /* _H_QX_JSON_PARSER */
