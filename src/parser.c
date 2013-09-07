@@ -27,43 +27,23 @@ static int Parser_pop(QxJsonParser *self);
 
 /* Public implementations */
 
-typedef struct Array
+typedef struct StackItem
 {
-	void **values;
-	size_t alloc;
-	size_t size;
-} Array;
-
-static void Array_destroy(Array *self);
-static int Array_push(Array *self, void *value);
-
-typedef struct Object
-{
+	int isObject;
 	void **keys;
 	void **values;
 	size_t alloc;
 	size_t size;
-} Object;
-
-static void Object_destroy(Object *self);
-static int Object_push(Object *self, void *key);
-
-typedef struct StackItem
-{
-	int isObject;
-	union
-	{
-		Array array;
-		Object object;
-	} value;
 } StackItem;
+
+static void StackItem_destroy(StackItem *self);
+static int StackItem_push(StackItem *self, void *key, void *value);
 
 struct QxJsonParser
 {
 	QxJsonValueFactory factory;
 	void *userPtr;
 	QxJsonValueSpec spec;
-
 
 	int (*feed)(QxJsonParser *self, QxJsonToken const *token);
 
@@ -96,11 +76,7 @@ void QxJsonParser_delete(QxJsonParser *self)
 	while (self->size)
 	{
 		--self->size;
-
-		if (self->stack[self->size].isObject)
-			Object_destroy(&self->stack[self->size].value.object);
-		else
-			Array_destroy(&self->stack[self->size].value.array);
+		StackItem_destroy(&self->stack[self->size]);
 	}
 
 	if (self->alloc)
@@ -148,7 +124,7 @@ static int feedArrayBegin(QxJsonParser *self, QxJsonToken const *token)
 	if (value)
 	{
 		self->feed = &feedArrayValue;
-		return Array_push(&self->stack[self->size - 1].value.array, value);
+		return StackItem_push(&self->stack[self->size - 1], NULL, value);
 	}
 
 	switch (token->type)
@@ -196,7 +172,7 @@ static int feedArraySeparator(QxJsonParser *self, QxJsonToken const *token)
 	if (value)
 	{
 		self->feed = &feedArrayValue;
-		return Array_push(&self->stack[self->size - 1].value.array, value);
+		return StackItem_push(&self->stack[self->size - 1], NULL, value);
 	}
 
 	switch (token->type)
@@ -231,7 +207,7 @@ static int feedObjectBegin(QxJsonParser *self, QxJsonToken const *token)
 			return -1;
 
 		self->feed = &feedObjectKey;
-		return Object_push(&self->stack[self->size - 1].value.object, key);
+		return StackItem_push(&self->stack[self->size - 1], key, NULL);
 
 	case QxJsonTokenEndObject:
 		return Parser_pop(self);
@@ -258,11 +234,11 @@ static int feedObjectKey(QxJsonParser *self, QxJsonToken const *token)
 static int feedObjectNVSeparator(QxJsonParser *self, QxJsonToken const *token)
 {
 	void *const value = Parser_createValueFromToken(self, token);
-	Object *object;
+	StackItem *object;
 
 	if (value)
 	{
-		object = &self->stack[self->size - 1].value.object;
+		object = &self->stack[self->size - 1];
 		object->values[object->size - 1] = value;
 		self->feed = &feedObjectValue;
 		return 0;
@@ -316,7 +292,7 @@ static int feedObjectVSeparator(QxJsonParser *self, QxJsonToken const *token)
 		if (!key)
 			return -1;
 
-		return Object_push(&self->stack[self->size - 1].value.object, key);
+		return StackItem_push(&self->stack[self->size - 1], key, NULL);
 	}
 
 	/* Unexpected token */
@@ -393,21 +369,20 @@ static int Parser_pop(QxJsonParser *self)
 	item = self->stack + self->size;
 
 	/* Close the array/object */
+	self->spec.data.object.values = item->values;
+	self->spec.data.object.size = item->size;
+
 	if (item->isObject)
 	{
-		self->spec.data.object.keys = item->value.object.keys;
-		self->spec.data.object.values = item->value.object.values;
-		self->spec.data.object.size = item->value.object.size;
+		self->spec.data.object.keys = item->keys;
 		value = Parser_createValue(self, QxJsonValueTypeObject);
-		Object_destroy(&item->value.object);
 	}
 	else
 	{
-		self->spec.data.array.values = item->value.array.values;
-		self->spec.data.array.size = item->value.array.size;
 		value = Parser_createValue(self, QxJsonValueTypeArray);
-		Array_destroy(&item->value.array);
 	}
+
+	StackItem_destroy(item);
 
 	if (!value)
 		return -1;
@@ -419,63 +394,36 @@ static int Parser_pop(QxJsonParser *self)
 
 		if (item->isObject)
 		{
-			item->value.object.values[item->value.object.size] = value;
+			item->values[item->size] = value;
 			self->feed = &feedObjectValue;
 			return 0;
 		}
 
 		self->feed = &feedArrayValue;
-		return Array_push(&item->value.array, value);
+		return StackItem_push(item, NULL, value);
 	}
 
 	return 0;
 }
 
-static void Array_destroy(Array *self)
+static void StackItem_destroy(StackItem *self)
 {
 	assert(self != NULL);
 
 	if (self->alloc)
 	{
+		if (self->isObject)
+		{
+			assert(self->keys != NULL);
+			free(self->keys);
+		}
+
 		assert(self->values != NULL);
 		free(self->values);
 	}
 }
 
-static int Array_push(Array *self, void *value)
-{
-	void **temp;
-
-	if (self->size == self->alloc)
-	{
-		temp = (void **)realloc(self->values, sizeof(void *) * (self->alloc << 1 | 1));
-
-		if (!temp)
-			return -1;
-
-		self->values = temp;
-		self->alloc = self->alloc << 1 | 1;
-	}
-
-	self->values[self->size] = value;
-	++self->size;
-	return 0;
-}
-
-static void Object_destroy(Object *self)
-{
-	assert(self != NULL);
-
-	if (self->alloc)
-	{
-		assert(self->keys != NULL);
-		free(self->keys);
-		assert(self->values != NULL);
-		free(self->values);
-	}
-}
-
-static int Object_push(Object *self, void *key)
+static int StackItem_push(StackItem *self, void *key, void *value)
 {
 	void **tempKeys, **tempValues;
 
@@ -483,10 +431,13 @@ static int Object_push(Object *self, void *key)
 	{
 		self->alloc = self->alloc << 1 | 1;
 
-		tempKeys = (void **)realloc(self->keys, sizeof(void *) * self->alloc);
+		tempKeys = NULL;
 		tempValues = (void **)realloc(self->values, sizeof(void *) * self->alloc);
 
-		if (!tempKeys || !tempValues)
+		if (self->isObject && tempValues)
+			tempKeys = (void **)realloc(self->keys, sizeof(void *) * self->alloc);
+
+		if (!tempValues || (self->isObject && !tempKeys))
 		{
 			self->alloc >>= 1;
 			return -1;
@@ -496,7 +447,10 @@ static int Object_push(Object *self, void *key)
 		self->values = tempValues;
 	}
 
-	self->keys[self->size] = key;
+	if (self->isObject)
+		self->keys[self->size] = key;
+	self->values[self->size] = value;
+
 	++self->size;
 	return 0;
 }
