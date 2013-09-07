@@ -34,7 +34,6 @@ typedef struct Array
 	size_t size;
 } Array;
 
-static void Array_init(Array *self);
 static void Array_destroy(Array *self);
 static int Array_push(Array *self, void *value);
 
@@ -46,7 +45,6 @@ typedef struct Object
 	size_t size;
 } Object;
 
-static void Object_init(Object *self);
 static void Object_destroy(Object *self);
 static int Object_push(Object *self, void *key);
 
@@ -376,13 +374,8 @@ static int Parser_push(QxJsonParser *self, int isObject)
 	}
 
 	temp = self->stack + self->size;
+	memset(temp, 0, sizeof(struct StackItem));
 	temp->isObject = isObject;
-
-	if (isObject)
-		Object_init(&temp->value.object);
-	else
-		Array_init(&temp->value.array);
-
 	++self->size;
 	++self->spec.depth;
 	return 0;
@@ -438,12 +431,6 @@ static int Parser_pop(QxJsonParser *self)
 	return 0;
 }
 
-static void Array_init(Array *self)
-{
-	assert(self != NULL);
-	memset(self, 0, sizeof(Array));
-}
-
 static void Array_destroy(Array *self)
 {
 	assert(self != NULL);
@@ -473,12 +460,6 @@ static int Array_push(Array *self, void *value)
 	self->values[self->size] = value;
 	++self->size;
 	return 0;
-}
-
-static void Object_init(Object *self)
-{
-	assert(self != NULL);
-	memset(self, 0, sizeof(Object));
 }
 
 static void Object_destroy(Object *self)
