@@ -25,8 +25,8 @@ int main(void)
 	expect_zero(QxJsonValue_objectUnset(object, key));
 	expect_int_equal(QxJsonValue_size(object), 0);
 
-	QxJsonValue_decref(key);
-	QxJsonValue_decref(value);
-	QxJsonValue_decref(object);
+	QxJsonValue_release(key);
+	QxJsonValue_release(value);
+	QxJsonValue_release(object);
 	return EXIT_SUCCESS;
 }

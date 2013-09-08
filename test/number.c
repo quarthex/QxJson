@@ -35,12 +35,12 @@ int main(void)
 		expect_not_null(number);
 		expect_ok(QX_JSON_IS_NUMBER(number));
 		expect_zero(compareNumbers(QxJsonValue_numberValue(number), numbers[index]));
-		QxJsonValue_decref(number);
+		QxJsonValue_release(number);
 	}
 
 	number = QxJsonValue_numberNew(-0.);
 	expect_not_zero(compareNumbers(QxJsonValue_numberValue(number), 0.));
-	QxJsonValue_decref(number);
+	QxJsonValue_release(number);
 
 	return EXIT_SUCCESS;
 }

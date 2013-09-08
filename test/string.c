@@ -24,6 +24,6 @@ int main(void)
 	expect_int_equal(QxJsonValue_size(string), 5);
 	expect_zero(memcmp(QxJsonValue_stringValue(string), L"Hello", 5 * sizeof(wchar_t)));
 
-	QxJsonValue_decref(string);
+	QxJsonValue_release(string);
 	return EXIT_SUCCESS;
 }

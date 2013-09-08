@@ -35,8 +35,8 @@ struct ObjectNode
 
 #define ObjectNode_alloc() ((ObjectNode *)malloc(sizeof(ObjectNode)));
 #define ObjectNode_delete(node) do {  \
-	QxJsonValue_decref((node)->key);   \
-	QxJsonValue_decref((node)->value); \
+	QxJsonValue_release((node)->key);   \
+	QxJsonValue_release((node)->value); \
 	free((node));                      \
 } while (0)
 
@@ -59,14 +59,14 @@ struct QxJsonValue
 	(self)->type = (t); (self)->ref = 0; (self)->size = 0; \
 } while (0)
 
-void QxJsonValue_incref(QxJsonValue *self)
+void QxJsonValue_retains(QxJsonValue *self)
 {
 	assert(self != NULL);
 	++self->ref;
 	return;
 }
 
-void QxJsonValue_decref(QxJsonValue *self)
+void QxJsonValue_release(QxJsonValue *self)
 {
 	void *node, *end;
 	assert(self != NULL);
@@ -91,7 +91,7 @@ void QxJsonValue_decref(QxJsonValue *self)
 			while (node != end)
 			{
 				assert(((ArrayNode *)node)->value != NULL);
-				QxJsonValue_decref(((ArrayNode *)node)->value);
+				QxJsonValue_release(((ArrayNode *)node)->value);
 				node = ((ArrayNode *)node)->next;
 				free(((ArrayNode *)node)->previous);
 			}
@@ -105,9 +105,9 @@ void QxJsonValue_decref(QxJsonValue *self)
 			while (node != end)
 			{
 				assert(((ObjectNode *)node)->key != NULL);
-				QxJsonValue_decref(((ObjectNode *)node)->key);
+				QxJsonValue_release(((ObjectNode *)node)->key);
 				assert(((ObjectNode *)node)->value != NULL);
-				QxJsonValue_decref(((ObjectNode *)node)->value);
+				QxJsonValue_release(((ObjectNode *)node)->value);
 				node = ((ObjectNode *)node)->next;
 				free(((ObjectNode *)node)->previous);
 			}
@@ -399,8 +399,8 @@ int QxJsonValue_objectSet(QxJsonValue *self, QxJsonValue *key, QxJsonValue *valu
 		if (compareKey(node->key, key))
 		{
 			/* Existing key */
-			QxJsonValue_incref(value);
-			QxJsonValue_decref(node->value);
+			QxJsonValue_retains(value);
+			QxJsonValue_release(node->value);
 			node->value = value;
 			return 0;
 		}
@@ -422,8 +422,8 @@ int QxJsonValue_objectSet(QxJsonValue *self, QxJsonValue *key, QxJsonValue *valu
 	/* Initialize it */
 	end->key = key;
 	end->value = value;
-	QxJsonValue_incref((QxJsonValue *)key);
-	QxJsonValue_incref(value);
+	QxJsonValue_retains((QxJsonValue *)key);
+	QxJsonValue_retains(value);
 	++self->size;
 
 	return 0;

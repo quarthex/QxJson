@@ -7,52 +7,41 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 
 #include "../include/qx.json.parser.h"
 
-static int feedDefault(QxJsonParser *self, QxJsonToken const *token);
-static int feedArrayBegin(QxJsonParser *self, QxJsonToken const *token);
-static int feedArrayValue(QxJsonParser *self, QxJsonToken const *token);
-static int feedArraySeparator(QxJsonParser *self, QxJsonToken const *token);
-static int feedObjectBegin(QxJsonParser *self, QxJsonToken const *token);
-static int feedObjectKey(QxJsonParser *self, QxJsonToken const *token);
-static int feedObjectNVSeparator(QxJsonParser *self, QxJsonToken const *token);
-static int feedObjectValue(QxJsonParser *self, QxJsonToken const *token);
-static int feedObjectVSeparator(QxJsonParser *self, QxJsonToken const *token);
-
-static void *Parser_createValue(QxJsonParser *self, QxJsonValueType type);
-static void *Parser_createValueFromToken(QxJsonParser *self, QxJsonToken const *token);
-static int Parser_push(QxJsonParser *self, int isObject);
-static int Parser_pop(QxJsonParser *self);
+static int feedAfterVoid(QxJsonParser *self, QxJsonToken const *token);
+static int feedAfterValue(QxJsonParser *self, QxJsonToken const *token);
+static int feedAfterArrayBegin(QxJsonParser *self, QxJsonToken const *token);
+static int feedAfterArrayValue(QxJsonParser *self, QxJsonToken const *token);
+static int feedAfterArrayComma(QxJsonParser *self, QxJsonToken const *token);
+static int feedAfterObjectBegin(QxJsonParser *self, QxJsonToken const *token);
+static int feedAfterObjectKey(QxJsonParser *self, QxJsonToken const *token);
+static int feedAfterObjectColon(QxJsonParser *self, QxJsonToken const *token);
+static int feedAfterObjectValue(QxJsonParser *self, QxJsonToken const *token);
+static int feedAfterObjectComma(QxJsonParser *self, QxJsonToken const *token);
+static void popStackItem(QxJsonParser *self);
+static QxJsonValue *createValueFromToken(QxJsonParser *self, QxJsonToken const *token);
 
 /* Public implementations */
 
-typedef struct StackItem
+typedef struct StackValue
 {
-	int isObject;
-	void **keys;
-	void **values;
-	size_t alloc;
-	size_t size;
-} StackItem;
+	QxJsonValue *value;
+	struct StackValue *next;
+} StackValue;
 
-static void StackItem_destroy(StackItem *self);
-static int StackItem_push(StackItem *self, void *key, void *value);
+#define StackValue_alloc() ((StackValue *)malloc(sizeof(StackValue)))
 
 struct QxJsonParser
 {
-	QxJsonValueFactory factory;
-	void *userPtr;
-	QxJsonValueSpec spec;
-
-	int (*feed)(QxJsonParser *self, QxJsonToken const *token);
-
-	StackItem *stack;
-	size_t alloc;
-	size_t size;
+	void *key;
+	int(*feed)(QxJsonParser *self, QxJsonToken const *token);
+	StackValue head;
 };
 
-QxJsonParser *QxJsonParser_new(QxJsonValueFactory factory, void *userPtr)
+QxJsonParser *QxJsonParser_new(void)
 {
 	QxJsonParser *instance;
 
@@ -61,396 +50,352 @@ QxJsonParser *QxJsonParser_new(QxJsonValueFactory factory, void *userPtr)
 	if (instance)
 	{
 		memset(instance, 0, sizeof(QxJsonParser));
-		instance->factory = factory;
-		instance->userPtr = userPtr;
-		instance->feed = &feedDefault;
+		instance->feed = &feedAfterVoid;
 	}
 
 	return instance;
 }
 
-void QxJsonParser_delete(QxJsonParser *self)
+void QxJsonParser_release(QxJsonParser *self)
 {
-	assert(self != NULL);
+	StackValue *item;
 
-	while (self->size)
+	if (self)
 	{
-		--self->size;
-		StackItem_destroy(&self->stack[self->size]);
-	}
+		if (self->head.value)
+		{
+			QxJsonValue_release(self->head.next->value);
 
-	if (self->alloc)
-	{
-		assert(self->stack != NULL);
-		free(self->stack);
-	}
+			if (self->key)
+				QxJsonValue_release(self->key);
 
-	free(self);
+			while (self->head.next)
+			{
+				item = self->head.next;
+				self->head.next = item->next;
+				free(item);
+			}
+		}
+
+		free(self);
+	}
 }
 
 int QxJsonParser_feed(QxJsonParser *self, QxJsonToken const *token)
 {
-	return self->feed(self, token);
+	if (!self || !token)
+		/* Invalid argument */
+		return -1;
+
+	return (*self->feed)(self, token);
+}
+
+int QxJsonParser_end(QxJsonParser *self, QxJsonValue **value)
+{
+	if (!self || !value)
+		/* Invalid arguments */
+		return -1;
+
+	if (self->head.value && !self->head.next)
+	{
+		*value = self->head.value;
+		self->head.value = NULL;
+		self->feed = &feedAfterVoid;
+		return 0;
+	}
+
+	/* Value is not ready */
+	return -1;
 }
 
 /* Private implementations */
 
-static int feedDefault(QxJsonParser *self, QxJsonToken const *token)
+static int feedAfterVoid(QxJsonParser *self, QxJsonToken const *token)
 {
-	if (Parser_createValueFromToken(self, token) != NULL)
-		return 0;
+	self->head.value = createValueFromToken(self, token);
 
-	switch (token->type)
-	{
-	case QxJsonTokenBeginArray:
-		self->feed = &feedArrayBegin;
-		return Parser_push(self, 0);
+	if (!self->head.value)
+		return -1;
 
-	case QxJsonTokenBeginObject:
-		self->feed = &feedObjectBegin;
-		return Parser_push(self, 1);
+	if (self->feed == &feedAfterVoid)
+		self->feed = &feedAfterValue;
 
-	default: break;
-	}
-
-	/* Unexpected token */
-	return -1;
-}
-
-static int feedArrayBegin(QxJsonParser *self, QxJsonToken const *token)
-{
-	void *const value = Parser_createValueFromToken(self, token);
-
-	if (value)
-	{
-		self->feed = &feedArrayValue;
-		return StackItem_push(&self->stack[self->size - 1], NULL, value);
-	}
-
-	switch (token->type)
-	{
-	case QxJsonTokenBeginArray:
-		self->feed = &feedArrayBegin;
-		return Parser_push(self, 0);
-
-	case QxJsonTokenBeginObject:
-		self->feed = &feedObjectBegin;
-		return Parser_push(self, 1);
-
-	case QxJsonTokenEndArray:
-		return Parser_pop(self);
-
-	default: break;
-	}
-
-	/* Unexpected token or value not created */
-	return -1;
-}
-
-static int feedArrayValue(QxJsonParser *self, QxJsonToken const *token)
-{
-	switch (token->type)
-	{
-	case QxJsonTokenValuesSeparator:
-		self->feed = &feedArraySeparator;
-		return 0;
-
-	case QxJsonTokenEndArray:
-		return Parser_pop(self);
-
-	default: break;
-	}
-
-	/* Unexpected token */
-	return -1;
-}
-
-static int feedArraySeparator(QxJsonParser *self, QxJsonToken const *token)
-{
-	void *const value = Parser_createValueFromToken(self, token);
-
-	if (value)
-	{
-		self->feed = &feedArrayValue;
-		return StackItem_push(&self->stack[self->size - 1], NULL, value);
-	}
-
-	switch (token->type)
-	{
-	case QxJsonTokenBeginArray:
-		self->feed = &feedArrayBegin;
-		return Parser_push(self, 0);
-
-	case QxJsonTokenBeginObject:
-		self->feed = &feedObjectBegin;
-		return Parser_push(self, 1);
-
-	default: break;
-	}
-
-	/* Unexpected token or value not created */
-	return -1;
-}
-
-static int feedObjectBegin(QxJsonParser *self, QxJsonToken const *token)
-{
-	void *key;
-
-	switch (token->type)
-	{
-	case QxJsonTokenString:
-		self->spec.data.string.data = token->data;
-		self->spec.data.string.size = token->size;
-		key = Parser_createValue(self, QxJsonValueTypeString);
-
-		if (!key)
-			return -1;
-
-		self->feed = &feedObjectKey;
-		return StackItem_push(&self->stack[self->size - 1], key, NULL);
-
-	case QxJsonTokenEndObject:
-		return Parser_pop(self);
-
-	default: break;
-	}
-
-	/* Unexpected token */
-	return -1;
-}
-
-static int feedObjectKey(QxJsonParser *self, QxJsonToken const *token)
-{
-	if (token->type == QxJsonTokenNameValueSeparator)
-	{
-		self->feed = &feedObjectNVSeparator;
-		return 0;
-	}
-
-	/* Unexpected token */
-	return -1;
-}
-
-static int feedObjectNVSeparator(QxJsonParser *self, QxJsonToken const *token)
-{
-	void *const value = Parser_createValueFromToken(self, token);
-	StackItem *object;
-
-	if (value)
-	{
-		object = &self->stack[self->size - 1];
-		object->values[object->size - 1] = value;
-		self->feed = &feedObjectValue;
-		return 0;
-	}
-
-	switch (token->type)
-	{
-	case QxJsonTokenBeginArray:
-		self->feed = &feedArrayBegin;
-		return Parser_push(self, 0);
-
-	case QxJsonTokenBeginObject:
-		self->feed = &feedObjectBegin;
-		return Parser_push(self, 1);
-
-	default: break;
-	}
-
-	/* Unexpected token or value not created */
-	return -1;
-}
-
-static int feedObjectValue(QxJsonParser *self, QxJsonToken const *token)
-{
-	switch (token->type)
-	{
-	case QxJsonTokenValuesSeparator:
-		self->feed = &feedObjectVSeparator;
-		return 0;
-
-	case QxJsonTokenEndObject:
-		return Parser_pop(self);
-
-	default: break;
-	}
-
-	/* Unexpected token */
-	return -1;
-}
-
-static int feedObjectVSeparator(QxJsonParser *self, QxJsonToken const *token)
-{
-	void *key;
-
-	if (token->type == QxJsonTokenString)
-	{
-		self->spec.data.string.data = token->data;
-		self->spec.data.string.size = token->size;
-		key = Parser_createValue(self, QxJsonValueTypeString);
-
-		if (!key)
-			return -1;
-
-		return StackItem_push(&self->stack[self->size - 1], key, NULL);
-	}
-
-	/* Unexpected token */
-	return -1;
-}
-
-static void *Parser_createValue(QxJsonParser *self, QxJsonValueType type)
-{
-	self->spec.type = type;
-	return (*self->factory)(&self->spec, self->userPtr);
-}
-
-static void *Parser_createValueFromToken(QxJsonParser *self, QxJsonToken const *token)
-{
-	switch (token->type)
-	{
-	case QxJsonTokenString:
-		self->spec.data.string.data = token->data;
-		self->spec.data.string.size = token->size;
-		return Parser_createValue(self, QxJsonValueTypeString);
-
-	case QxJsonTokenNumber:
-		self->spec.data.string.data = token->data;
-		self->spec.data.string.size = token->size;
-		return Parser_createValue(self, QxJsonValueTypeNumber);
-
-	case QxJsonTokenFalse:
-		return Parser_createValue(self, QxJsonValueTypeFalse);
-
-	case QxJsonTokenTrue:
-		return Parser_createValue(self, QxJsonValueTypeTrue);
-
-	case QxJsonTokenNull:
-		return Parser_createValue(self, QxJsonValueTypeNull);
-
-	default: break;
-	}
-
-	return NULL;
-}
-
-static int Parser_push(QxJsonParser *self, int isObject)
-{
-	StackItem *temp;
-
-	if (self->size == self->alloc)
-	{
-		temp = (StackItem *)realloc(self->stack, sizeof(StackItem) * (self->alloc << 1 | 1));
-
-		if (!temp)
-			return -1;
-
-		self->stack = temp;
-		self->alloc = self->alloc << 1 | 1;
-	}
-
-	temp = self->stack + self->size;
-	memset(temp, 0, sizeof(struct StackItem));
-	temp->isObject = isObject;
-	++self->size;
-	++self->spec.depth;
 	return 0;
 }
 
-static int Parser_pop(QxJsonParser *self)
+static int feedAfterValue(QxJsonParser *self, const QxJsonToken *token)
 {
-	void *value;
-	StackItem *item;
+	(void)self;
+	(void)token;
+	return -1;
+}
 
-	assert(self != NULL);
-	assert(self->size > 0);
-	--self->size;
-	--self->spec.depth;
-	item = self->stack + self->size;
+static int feedAfterArrayBegin(QxJsonParser *self, QxJsonToken const *token)
+{
+	QxJsonValue *value;
 
-	/* Close the array/object */
-	self->spec.data.object.values = item->values;
-	self->spec.data.object.size = item->size;
-
-	if (item->isObject)
+	switch (token->type)
 	{
-		self->spec.data.object.keys = item->keys;
-		value = Parser_createValue(self, QxJsonValueTypeObject);
+	case QxJsonTokenEndArray:
+		popStackItem(self);
+		break;
+
+	default:
+		value = createValueFromToken(self, token);
+
+		if (!value)
+			/* Unexpected token */
+			return -1;
+
+		if (QxJsonValue_arrayAppendNew(self->head.next->value, value) != 0)
+			/* Failed to append a value to the array */
+			return -1;
+
+		self->feed = &feedAfterArrayValue;
+		break;
+	}
+
+	return 0;
+}
+
+static int feedAfterArrayValue(QxJsonParser *self, QxJsonToken const *token)
+{
+	switch (token->type)
+	{
+	case QxJsonTokenEndArray:
+		popStackItem(self);
+		break;
+
+	case QxJsonTokenValuesSeparator:
+		self->feed = &feedAfterArrayComma;
+		break;
+
+	default:
+		/* Unexpected token */
+		return -1;
+	}
+
+	return 0;
+}
+
+static int feedAfterArrayComma(QxJsonParser *self, QxJsonToken const *token)
+{
+	QxJsonValue *value;
+	StackValue *head;
+
+	head = self->head.next;
+	value = createValueFromToken(self, token);
+
+	if (!value)
+		/* Unexpected token */
+		return -1;
+
+	if (QxJsonValue_arrayAppendNew(head->value, value) != 0)
+		/* Failed to append a value to the array */
+		return -1;
+
+	self->feed = &feedAfterArrayValue;
+	return 0;
+}
+
+static int feedAfterObjectBegin(QxJsonParser *self, QxJsonToken const *token)
+{
+	switch (token->type)
+	{
+	case QxJsonTokenString:
+		self->key = QxJsonValue_stringNew(token->data, token->size);
+
+		if (!self->key)
+			/* Failed to create string value */
+			return -1;
+
+		self->feed = &feedAfterObjectKey;
+		break;
+
+	case QxJsonTokenEndObject:
+		popStackItem(self);
+		break;
+
+	default:
+		/* Unexpected token */
+		return -1;
+	}
+
+	return 0;
+}
+
+static int feedAfterObjectKey(QxJsonParser *self, QxJsonToken const *token)
+{
+	if (token->type != QxJsonTokenNameValueSeparator)
+	{
+		/* Unexpected token */
+		return -1;
+	}
+
+	self->feed = &feedAfterObjectColon;
+	return 0;
+}
+
+static int feedAfterObjectColon(QxJsonParser *self, QxJsonToken const *token)
+{
+	QxJsonValue *value;
+	value = createValueFromToken(self, token);
+
+	if (!value)
+		/* Unexpected token */
+		return -1;
+
+	assert(self->key != NULL);
+
+	if (QxJsonValue_objectSet(self->head.next->value, self->key, value) != 0)
+		/* Failed to add the new key/value pair */
+		return -1;
+
+	QxJsonValue_release(self->key);
+	self->key = NULL;
+	QxJsonValue_release(value);
+
+	self->feed = &feedAfterObjectValue;
+	return 0;
+}
+
+static int feedAfterObjectValue(QxJsonParser *self, QxJsonToken const *token)
+{
+	switch (token->type)
+	{
+	case QxJsonTokenValuesSeparator:
+		self->feed = &feedAfterObjectComma;
+		break;
+
+	case QxJsonTokenEndObject:
+		popStackItem(self);
+		break;
+
+	default:
+		/* Unexpected token */
+		return -1;
+	}
+
+	return 0;
+}
+
+static int feedAfterObjectComma(QxJsonParser *self, QxJsonToken const *token)
+{
+	if (token->type != QxJsonTokenString)
+		/* Unexpected token */
+		return -1;
+
+	assert(self->key == NULL);
+	self->key = QxJsonValue_stringNew(token->data, token->size);
+
+	if (!self->key)
+		/* Failed to create the string */
+		return -1;
+
+	self->feed = &feedAfterObjectKey;
+	return 0;
+}
+
+static void popStackItem(QxJsonParser *self)
+{
+	StackValue *item;
+	item = self->head.next;
+	self->head.next = item->next;
+	free(item);
+
+	if (self->head.next)
+	{
+		if (QX_JSON_IS_ARRAY(self->head.next->value))
+		{
+			self->feed = &feedAfterArrayValue;
+		}
+		else
+		{
+			assert(QX_JSON_IS_OBJECT(self->head.next->value));
+			self->feed = &feedAfterObjectValue;
+		}
 	}
 	else
 	{
-		value = Parser_createValue(self, QxJsonValueTypeArray);
-	}
-
-	StackItem_destroy(item);
-
-	if (!value)
-		return -1;
-
-	if (self->size)
-	{
-		/* Push it at the end of the parent array/object */
-		--item;
-
-		if (item->isObject)
-		{
-			item->values[item->size] = value;
-			self->feed = &feedObjectValue;
-			return 0;
-		}
-
-		self->feed = &feedArrayValue;
-		return StackItem_push(item, NULL, value);
-	}
-
-	return 0;
-}
-
-static void StackItem_destroy(StackItem *self)
-{
-	assert(self != NULL);
-
-	if (self->alloc)
-	{
-		if (self->isObject)
-		{
-			assert(self->keys != NULL);
-			free(self->keys);
-		}
-
-		assert(self->values != NULL);
-		free(self->values);
+		self->feed = &feedAfterValue;
 	}
 }
 
-static int StackItem_push(StackItem *self, void *key, void *value)
+static QxJsonValue *createValueFromToken(QxJsonParser *self, QxJsonToken const *token)
 {
-	void **tempKeys, **tempValues;
+	StackValue *item = NULL;
+	double number;
+	wchar_t *endptr;
 
-	if (self->size == self->alloc)
+	switch (token->type)
 	{
-		self->alloc = self->alloc << 1 | 1;
+	case QxJsonTokenString:
+		return QxJsonValue_stringNew(token->data, token->size);
 
-		tempKeys = NULL;
-		tempValues = (void **)realloc(self->values, sizeof(void *) * self->alloc);
+	case QxJsonTokenNumber:
+		endptr = NULL;
+		number = wcstod(token->data, &endptr);
 
-		if (self->isObject && tempValues)
-			tempKeys = (void **)realloc(self->keys, sizeof(void *) * self->alloc);
+		if (endptr == token->data + token->size)
+			return QxJsonValue_numberNew(number);
 
-		if (!tempValues || (self->isObject && !tempKeys))
+		break;
+
+	case QxJsonTokenFalse:
+		return QxJsonValue_falseNew();
+
+	case QxJsonTokenTrue:
+		return QxJsonValue_trueNew();
+
+	case QxJsonTokenNull:
+		return QxJsonValue_nullNew();
+
+	case QxJsonTokenBeginArray:
+
+		item = StackValue_alloc();
+
+		if (item)
 		{
-			self->alloc >>= 1;
-			return -1;
+			item->value = QxJsonValue_arrayNew();
+
+			if (item->value)
+				self->feed = &feedAfterArrayBegin;
 		}
 
-		self->keys = tempKeys;
-		self->values = tempValues;
+		/* Allocation error */
+		break;
+
+	case QxJsonTokenBeginObject:
+
+		item = StackValue_alloc();
+
+		if (item)
+		{
+			item->value = QxJsonValue_objectNew();
+
+			if (item->value)
+				self->feed = &feedAfterObjectBegin;
+		}
+
+		/* Allocation error */
+		break;
+
+	default:
+		break;
 	}
 
-	if (self->isObject)
-		self->keys[self->size] = key;
-	self->values[self->size] = value;
+	if (item)
+	{
+		if (item->value)
+		{
+			item->next = self->head.next;
+			self->head.next = item;
+			return item->value;
+		}
 
-	++self->size;
-	return 0;
+		/* Allocation error */
+		free(item);
+	}
+
+	return NULL;
 }

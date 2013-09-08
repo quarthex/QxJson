@@ -15,6 +15,6 @@ int main(void)
 	QxJsonValue *const value = QxJsonValue_falseNew();
 	expect_not_null(value);
 	expect_ok(QX_JSON_IS_FALSE(value));
-	QxJsonValue_decref(value);
+	QxJsonValue_release(value);
 	return EXIT_SUCCESS;
 }

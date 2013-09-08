@@ -10,25 +10,12 @@
 #include <stddef.h>
 
 #include "qx.json.tokenizer.h"
+#include "qx.json.value.h"
 
 /**
  * @brief The QxJsonParser class.
  */
 typedef struct QxJsonParser QxJsonParser;
-
-/**
- * @brief The unique identifier of a value type.
- */
-typedef enum QxJsonValueType
-{
-	QxJsonValueTypeNull,
-	QxJsonValueTypeTrue,
-	QxJsonValueTypeFalse,
-	QxJsonValueTypeNumber,
-	QxJsonValueTypeString,
-	QxJsonValueTypeArray,
-	QxJsonValueTypeObject
-} QxJsonValueType;
 
 /*! Value description processed by a value factory */
 typedef struct QxJsonValueSpec QxJsonValueSpec;
@@ -57,20 +44,15 @@ typedef void *(*QxJsonValueFactory)(QxJsonValueSpec const *spec, void *userPtr);
 
 /**
  * @brief Create a new parser.
- * @param factory A value factory.
- * @param userPtr Custom pointer forwarded to the factory.
  * @return A parser instance.
- *
- * If the factory return a NULL value, the parser fails.
- * The parser is not responsible of the memory managment of the created values.
  */
-QX_API QxJsonParser *QxJsonParser_new(QxJsonValueFactory factory, void *userPtr);
+QX_API QxJsonParser *QxJsonParser_new(void);
 
 /**
  * @brief Destroy a parser.
  * @param self The instance to be destroyed.
  */
-QX_API void QxJsonParser_delete(QxJsonParser *self);
+QX_API void QxJsonParser_release(QxJsonParser *self);
 
 /**
  * @brief Feed the parser with a new token.
@@ -79,5 +61,13 @@ QX_API void QxJsonParser_delete(QxJsonParser *self);
  * @return 0 on success.
  */
 QX_API int QxJsonParser_feed(QxJsonParser *self, QxJsonToken const *token);
+
+/**
+ * @brief Ends the stream parsing.
+ * @param self The parser instance.
+ * @param value The parsed value if any.
+ * @return 0 on success.
+ */
+QX_API int QxJsonParser_end(QxJsonParser *self, QxJsonValue **value);
 
 #endif /* _H_QX_JSON_PARSER */

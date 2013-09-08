@@ -47,6 +47,6 @@ int main(void)
 	expect_ok(QX_JSON_IS_TRUE(QxJsonValue_arrayGet(array, 3)));
 	/* T F N T */
 
-	QxJsonValue_decref(array);
+	QxJsonValue_release(array);
 	return EXIT_SUCCESS;
 }
