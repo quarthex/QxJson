@@ -280,6 +280,33 @@ QxJsonValue const *QxJsonValue_arrayGet(QxJsonValue *self, size_t index)
 	return node->value;
 }
 
+int QxJsonValue_arrayEach(QxJsonValue *self,
+	int (*callback)(size_t, QxJsonValue *, void *), void *ptr)
+{
+	ArrayNode *end;
+	ArrayNode *node;
+	size_t index;
+	int error;
+
+	if (!self || self->type != QxJsonValueTypeArray)
+		/* Invalid argument */
+		return -1;
+
+	end = &self->data.array;
+	node = end->next;
+	index = 0;
+
+	for (; node != end; node = node->next, ++index)
+	{
+		error = (*callback)(index, node->value, ptr);
+
+		if (error)
+			return error;
+	}
+
+	return 0;
+}
+
 /* False */
 
 QxJsonValue *QxJsonValue_falseNew(void)
@@ -349,15 +376,15 @@ QxJsonValue *QxJsonValue_objectNew(void)
 	return instance;
 }
 
-static int compareKey(QxJsonValue *first, QxJsonValue *last)
+static int compareKey(QxJsonValue const *first, QxJsonValue const *last)
 {
 	size_t keySize;
 	wchar_t const *firstData, *lastData;
 
 	assert(first != NULL);
 	assert(last != NULL);
-	assert(first->type == QxJsonValueTypeString);
-	assert(last->type == QxJsonValueTypeString);
+	assert(QX_JSON_IS_STRING(first));
+	assert(QX_JSON_IS_STRING(last));
 
 	if (first == last)
 		/* Same instance */
@@ -392,8 +419,9 @@ int QxJsonValue_objectSet(QxJsonValue *self, QxJsonValue *key, QxJsonValue *valu
 		/* Invalid argument */
 		return -1;
 
-	node = self->data.object.next;
 	end = &self->data.object;
+	node = end->next;
+
 	for (; node != end; node = node->next)
 	{
 		if (compareKey(node->key, key))
@@ -439,8 +467,9 @@ int QxJsonValue_objectUnset(QxJsonValue *self, QxJsonValue *key)
 		/* Invalid argument */
 		return -1;
 
-	node = self->data.object.next;
 	end = &self->data.object;
+	node = end->next;
+
 	for (; node != end; node = node->next)
 	{
 		if (compareKey(node->key, key))
@@ -452,6 +481,55 @@ int QxJsonValue_objectUnset(QxJsonValue *self, QxJsonValue *key)
 			--self->size;
 			break;
 		}
+	}
+
+	return 0;
+}
+
+int QxJsonValue_objectGet(QxJsonValue *self, const QxJsonValue *key,
+	QxJsonValue **value)
+{
+	ObjectNode *node, *end;
+
+	if (!self || self->type != QxJsonValueTypeObject
+		|| !key || key->type != QxJsonValueTypeString || !value)
+		/* Invalid argument */
+		return -1;
+
+	end = &self->data.object;
+	node = end->next;
+
+	for (; node != end; node = node->next)
+		if (compareKey(node->key, key) == 0)
+		{
+			*value = node->value;
+			return 0;
+		}
+
+	/* Not found */
+	return -1;
+}
+
+int QxJsonValue_objectEach(QxJsonValue *self,
+	int (*callback)(QxJsonValue const *, QxJsonValue *, void *), void *ptr)
+{
+	ObjectNode *end;
+	ObjectNode *node;
+	int error;
+
+	if (!self || self->type != QxJsonValueTypeObject || !callback)
+		/* Invalid argument */
+		return -1;
+
+	end = &self->data.object;
+	node = end->next;
+
+	for (; node != end; node = node->next)
+	{
+		error = (*callback)(node->key, node->value, ptr);
+
+		if (error)
+			return error;
 	}
 
 	return 0;

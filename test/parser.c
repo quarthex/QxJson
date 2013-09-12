@@ -15,21 +15,12 @@
 static void testArray(void)
 {
 	QxJsonParser *parser;
-	QxJsonToken token;
 	QxJsonValue *root = NULL;
 
 	parser = QxJsonParser_new();
 	expect_not_null(parser);
 
-	token.type = QxJsonTokenBeginArray;
-	token.size = 0;
-	token.data = NULL;
-	expect_zero(QxJsonParser_feed(parser, &token));
-
-	token.type = QxJsonTokenEndArray;
-	token.size = 0;
-	token.data = NULL;
-	expect_zero(QxJsonParser_feed(parser, &token));
+	expect_zero(QxJsonParser_feed(parser, L"[]", 2));
 
 	expect_zero(QxJsonParser_end(parser, &root));
 	QxJsonParser_release(parser);
@@ -43,14 +34,12 @@ static void testArray(void)
 static void testFalse(void)
 {
 	QxJsonParser *parser;
-	QxJsonToken token;
 	QxJsonValue *root = NULL;
 
 	parser = QxJsonParser_new();
 	expect_not_null(parser);
 
-	token.type = QxJsonTokenFalse;
-	expect_zero(QxJsonParser_feed(parser, &token));
+	expect_zero(QxJsonParser_feed(parser, L"false", 5));
 
 	expect_zero(QxJsonParser_end(parser, &root));
 	QxJsonParser_release(parser);
@@ -63,14 +52,12 @@ static void testFalse(void)
 static void testNull(void)
 {
 	QxJsonParser *parser;
-	QxJsonToken token;
 	QxJsonValue *root = NULL;
 
 	parser = QxJsonParser_new();
 	expect_not_null(parser);
 
-	token.type = QxJsonTokenNull;
-	expect_zero(QxJsonParser_feed(parser, &token));
+	expect_zero(QxJsonParser_feed(parser, L"null", 4));
 
 	expect_zero(QxJsonParser_end(parser, &root));
 	QxJsonParser_release(parser);
@@ -83,16 +70,12 @@ static void testNull(void)
 static void testNumber(void)
 {
 	QxJsonParser *parser;
-	QxJsonToken token;
 	QxJsonValue *root = NULL;
 
 	parser = QxJsonParser_new();
 	expect_not_null(parser);
 
-	token.type = QxJsonTokenNumber;
-	token.data = L"3.1415";
-	token.size = 6;
-	expect_zero(QxJsonParser_feed(parser, &token));
+	expect_zero(QxJsonParser_feed(parser, L"3.1415", 6));
 
 	expect_zero(QxJsonParser_end(parser, &root));
 	QxJsonParser_release(parser);
@@ -106,32 +89,13 @@ static void testNumber(void)
 static void testObject(void)
 {
 	QxJsonParser *parser;
-	QxJsonToken token;
+	wchar_t const *text = L"{\"key\": null}";
 	QxJsonValue *root = NULL;
 
 	parser = QxJsonParser_new();
 	expect_not_null(parser);
 
-	token.type = QxJsonTokenBeginObject;
-	token.size = 0;
-	token.data = NULL;
-	expect_zero(QxJsonParser_feed(parser, &token));
-
-	token.type = QxJsonTokenString;
-	token.size = 3;
-	token.data = L"key";
-	expect_zero(QxJsonParser_feed(parser, &token));
-
-	token.type = QxJsonTokenNameValueSeparator;
-	expect_zero(QxJsonParser_feed(parser, &token));
-
-	token.type = QxJsonTokenNull;
-	expect_zero(QxJsonParser_feed(parser, &token));
-
-	token.type = QxJsonTokenEndObject;
-	token.size = 0;
-	token.data = NULL;
-	expect_zero(QxJsonParser_feed(parser, &token));
+	expect_zero(QxJsonParser_feed(parser, text, wcslen(text)));
 
 	expect_zero(QxJsonParser_end(parser, &root));
 	QxJsonParser_release(parser);
@@ -145,16 +109,12 @@ static void testObject(void)
 static void testString(void)
 {
 	QxJsonParser *parser;
-	QxJsonToken token;
 	QxJsonValue *root = NULL;
 
 	parser = QxJsonParser_new();
 	expect_not_null(parser);
 
-	token.type = QxJsonTokenString;
-	token.data = L"string";
-	token.size = 6;
-	expect_zero(QxJsonParser_feed(parser, &token));
+	expect_zero(QxJsonParser_feed(parser, L"\"string\"", 8));
 
 	expect_zero(QxJsonParser_end(parser, &root));
 	QxJsonParser_release(parser);
@@ -169,14 +129,12 @@ static void testString(void)
 static void testTrue(void)
 {
 	QxJsonParser *parser;
-	QxJsonToken token;
 	QxJsonValue *root = NULL;
 
 	parser = QxJsonParser_new();
 	expect_not_null(parser);
 
-	token.type = QxJsonTokenTrue;
-	expect_zero(QxJsonParser_feed(parser, &token));
+	expect_zero(QxJsonParser_feed(parser, L"true", 4));
 
 	expect_zero(QxJsonParser_end(parser, &root));
 	QxJsonParser_release(parser);

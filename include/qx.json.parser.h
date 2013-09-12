@@ -9,38 +9,12 @@
 
 #include <stddef.h>
 
-#include "qx.json.tokenizer.h"
 #include "qx.json.value.h"
 
 /**
  * @brief The QxJsonParser class.
  */
 typedef struct QxJsonParser QxJsonParser;
-
-/*! Value description processed by a value factory */
-typedef struct QxJsonValueSpec QxJsonValueSpec;
-struct QxJsonValueSpec
-{
-	/*! Depth of the value to be created (0 for root values) */
-	unsigned int depth;
-
-	/*! Type of the value */
-	QxJsonValueType type;
-
-	/*! Informations needed to create the value */
-	union
-	{
-		struct { wchar_t const *data; size_t size; } string;
-		struct { wchar_t const *data; size_t size; } number;
-		struct { void **values; size_t size; } array;
-		struct { void **keys; void **values; size_t size; } object;
-	} data;
-};
-
-/**
- * @brief Interface of a value factory.
- */
-typedef void *(*QxJsonValueFactory)(QxJsonValueSpec const *spec, void *userPtr);
 
 /**
  * @brief Create a new parser.
@@ -57,10 +31,12 @@ QX_API void QxJsonParser_release(QxJsonParser *self);
 /**
  * @brief Feed the parser with a new token.
  * @param self The parser instance.
- * @param token The new token.
+ * @param data Unicode chunck.
+ * @param size Size of the unicode chunck.
  * @return 0 on success.
  */
-QX_API int QxJsonParser_feed(QxJsonParser *self, QxJsonToken const *token);
+QX_API int QxJsonParser_feed(QxJsonParser *self,
+	wchar_t const *data, size_t size);
 
 /**
  * @brief Ends the stream parsing.

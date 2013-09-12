@@ -149,11 +149,24 @@ QX_API int QxJsonValue_arrayInsertNew(QxJsonValue *self, size_t index, QxJsonVal
 
 /**
  * @brief Get a value in the array.
- * @param array The array.
+ * @param self  The array.
  * @param index The index of the value in the array.
  * @return The value on success. A null pointer otherwise.
  */
 QX_API QxJsonValue const *QxJsonValue_arrayGet(QxJsonValue *self, size_t index);
+
+/**
+ * @brief Walk throught an array.
+ * @param self     The array.
+ * @param callback A function called for each value.
+ * @param ptr      A custome pointer forwarded to the callback.
+ * @return 0 on success.
+ *
+ * @c callback is called once for each value of the array.
+ * @c callback should return a non zero value to stop the walking loop.
+ */
+QX_API int QxJsonValue_arrayEach(QxJsonValue *self,
+	int (*callback)(size_t index, QxJsonValue *value, void *ptr), void *ptr);
 
 /* False */
 
@@ -212,6 +225,30 @@ QX_API int QxJsonValue_objectSet(QxJsonValue *self, QxJsonValue *key, QxJsonValu
  * @return 0 if the key have successfully be removed or if it did not exists.
  */
 QX_API int QxJsonValue_objectUnset(QxJsonValue *self, QxJsonValue *key);
+
+/**
+ * @brief Get a value from an object.
+ * @param self  The object.
+ * @param key   The key of the value to get.
+ * @param value The output value.
+ * @return 0 on success.
+ */
+QX_API int QxJsonValue_objectGet(QxJsonValue *self,
+	QxJsonValue const *key, QxJsonValue **value);
+
+/**
+ * @brief Walk through an object.
+ * @param self     The object.
+ * @param callback A function called for each key/value pair.
+ * @param ptr      A custome pointer forwarded to the callback.
+ * @return 0 on success.
+ *
+ * @c callback is called once for each key/value pait of the object.
+ * @c callback should return a non zero value to stop the walking loop.
+ */
+QX_API int QxJsonValue_objectEach(QxJsonValue *self,
+	int (*callback)(QxJsonValue const *key, QxJsonValue *value, void *ptr),
+	void *ptr);
 
 /* String */
 

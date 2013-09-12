@@ -10,100 +10,173 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <qx.json.tokenizer.h>
+#include <qx.json.parser.h>
 
 #include "expect.h"
 
-struct Wikipedia
+static int checkAddress(QxJsonValue const *key, QxJsonValue *value, void *ptr)
 {
-	char buffer[1024];
-	size_t size;
-};
-typedef struct Wikipedia Wikipedia;
+	wchar_t const *keyStr, *valueStr;
 
-static void unicode2ascii(char *dest, wchar_t const *src, size_t size)
-{
-	for (; size; ++dest, ++src, --size)
-		*dest = (char)*src;
+	(void)ptr;
+	expect_not_null(key);
+	expect_not_null(value);
+
+	expect_int_equal(QxJsonValue_type(key), QxJsonValueTypeString);
+	keyStr = QxJsonValue_stringValue(key);
+	expect_not_null(keyStr);
+
+	expect_int_equal(QxJsonValue_type(value), QxJsonValueTypeString);
+	valueStr = QxJsonValue_stringValue(value);
+	expect_not_null(valueStr);
+
+	if (wcscmp(keyStr, L"streetAddress") == 0)
+		expect_wstr_equal(valueStr, L"21 2nd Street");
+	else if (wcscmp(keyStr, L"city") == 0)
+		expect_wstr_equal(valueStr, L"New York");
+	else if (wcscmp(keyStr, L"state") == 0)
+		expect_wstr_equal(valueStr, L"NY");
+	else if (wcscmp(keyStr, L"postalCode") == 0)
+		expect_wstr_equal(valueStr, L"10021");
+	else
+		return -1;
+
+	return 0;
 }
 
-static char const *typeIdentifier(QxJsonTokenType type)
+static int checkPhoneNumber(size_t index, QxJsonValue *value, void *ptr)
 {
-	switch (type)
+	QxJsonValue *key, *subvalue;
+	(void)ptr;
+
+	expect_not_null(value);
+
+	switch (index)
 	{
-	case QxJsonTokenString:             return "s ";
-	case QxJsonTokenNumber:             return "n ";
-	case QxJsonTokenFalse:              return "f";
-	case QxJsonTokenTrue:               return "t";
-	case QxJsonTokenNull:               return "n";
-	case QxJsonTokenBeginArray:         return "ba";
-	case QxJsonTokenValuesSeparator:    return "vs";
-	case QxJsonTokenEndArray:           return "ea";
-	case QxJsonTokenBeginObject:        return "bo";
-	case QxJsonTokenNameValueSeparator: return "nvs";
-	case QxJsonTokenEndObject:          return "eo";
-	}
+	case 0:
+		expect_ok(QX_JSON_IS_OBJECT(value));
+		expect_int_equal(QxJsonValue_size(value), 2);
 
-	expect_ok(0);
-	return NULL;
-}
+		key = QxJsonValue_stringNew(L"type", 4);
+		subvalue = NULL;
+		expect_zero(QxJsonValue_objectGet(value, key, &subvalue));
+		QxJsonValue_release(key);
+		expect_not_null(subvalue);
+		expect_wstr_equal(QxJsonValue_stringValue(subvalue), L"home");
 
-static int Wikipedia_feed(QxJsonToken const *token, void *userData)
-{
-	Wikipedia *const self = (Wikipedia *)userData;
+		key = QxJsonValue_stringNew(L"number", 6);
+		subvalue = NULL;
+		expect_zero(QxJsonValue_objectGet(value, key, &subvalue));
+		QxJsonValue_release(key);
+		expect_not_null(subvalue);
+		expect_wstr_equal(QxJsonValue_stringValue(subvalue), L"212 555-1234");
 
-	self->size += sprintf(self->buffer + self->size, typeIdentifier(token->type));
-
-	switch (token->type)
-	{
-	case QxJsonTokenString:
-	case QxJsonTokenNumber:
-		expect_not_zero(token->size);
-		expect_not_null(token->data);
-		unicode2ascii(self->buffer + self->size, token->data, token->size);
-		self->size += token->size;
 		break;
 
+	case 1:
+		key = QxJsonValue_stringNew(L"type", 4);
+		subvalue = NULL;
+		expect_zero(QxJsonValue_objectGet(value, key, &subvalue));
+		QxJsonValue_release(key);
+		expect_not_null(subvalue);
+		expect_wstr_equal(QxJsonValue_stringValue(subvalue), L"fax");
+
+		key = QxJsonValue_stringNew(L"number", 6);
+		subvalue = NULL;
+		expect_zero(QxJsonValue_objectGet(value, key, &subvalue));
+		QxJsonValue_release(key);
+		expect_not_null(subvalue);
+		expect_wstr_equal(QxJsonValue_stringValue(subvalue), L"646 555-4567");
+
 	default:
-		expect_zero(token->size);
-		expect_null(token->data);
+		return -1;
 	}
 
-	self->buffer[self->size] = '\n';
-	++self->size;
+	return 0;
+}
+
+static int checkRoot(QxJsonValue const *key, QxJsonValue *value, void *ptr)
+{
+	wchar_t const *keyStr;
+
+	(void)ptr;
+	expect_not_null(key);
+	expect_not_null(value);
+
+	expect_ok(QX_JSON_IS_STRING(key));
+	keyStr = QxJsonValue_stringValue(key);
+	expect_not_null(keyStr);
+
+	if (wcscmp(keyStr, L"firstName") == 0)
+	{
+		expect_ok(QX_JSON_IS_STRING(value));
+		expect_wstr_equal(QxJsonValue_stringValue(value), L"John");
+	}
+	else if (wcscmp(keyStr, L"lastName") == 0)
+	{
+		expect_ok(QX_JSON_IS_STRING(value));
+		expect_wstr_equal(QxJsonValue_stringValue(value), L"Smith");
+	}
+	else if (wcscmp(keyStr, L"age") == 0)
+	{
+		expect_ok(QX_JSON_IS_NUMBER(value));
+		expect_double_equal(QxJsonValue_numberValue(value), 25.0);
+	}
+	else if (wcscmp(keyStr, L"address") == 0)
+	{
+		expect_ok(QX_JSON_IS_OBJECT(value));
+		expect_int_equal(QxJsonValue_size(value), 4);
+		expect_zero(QxJsonValue_objectEach(value, &checkAddress, NULL));
+	}
+	else if (wcscmp(keyStr, L"phoneNumber") == 0)
+	{
+		expect_ok(QX_JSON_IS_ARRAY(value));
+		expect_int_equal(QxJsonValue_size(value), 4);
+		expect_zero(QxJsonValue_arrayEach(value, &checkPhoneNumber, NULL));
+	}
+	else
+		return -1;
+
 	return 0;
 }
 
 int main(void)
 {
-	int fd;
+	FILE *file;
 	char buffer[512];
+	wchar_t wbuffer[512];
 	ssize_t bufferSize;
-	Wikipedia wikipedia;
+	QxJsonParser *parser = NULL;
+	QxJsonValue *value = NULL;
+
+	/* Create the parser */
+	parser = QxJsonParser_new();
+	expect_not_null(parser);
 
 	/* Read the JSON file */
-	fd = open("wikipedia.json", O_RDONLY);
-	expect_ok(fd >= 0);
-	bufferSize = read(fd, buffer, sizeof(buffer));
-	expect_ok(bufferSize > 0);
-	close(fd);
+	file = fopen("../test/wikipedia.json", "r");
+	expect_ok(file != NULL);
 
-	/* Tokenize */
-	memset(&wikipedia, 0, sizeof(wikipedia));
-	expect_zero(qxJsonAsciiTokenize(buffer, bufferSize, &Wikipedia_feed, &wikipedia));
+	do
+	{
+		bufferSize = fread(buffer, sizeof(char), sizeof(buffer), file);
+		expect_ok(bufferSize >= 0);
 
-	/* Read the parsed file */
-	fd = open("wikipedia.parsed", O_RDONLY);
-	expect_ok(fd >= 0);
-	bufferSize = read(fd, buffer, sizeof(buffer));
-	expect_ok(bufferSize > 0);
-	close(fd);
+		if (bufferSize)
+		{
+			expect_zero(QxJsonParser_feed(parser, wbuffer, mbstowcs(wbuffer, buffer, bufferSize)));
+		}
+	}
+	while (bufferSize > 0);
 
-	/* Compare */
-	expect_int_equal(bufferSize, wikipedia.size);
-	buffer[bufferSize] = '\0';
-	expect_str_equal(buffer, wikipedia.buffer);
-	expect_zero(memcmp(buffer, wikipedia.buffer, bufferSize));
+	fclose(file);
+	expect_zero(QxJsonParser_end(parser, &value));
+
+	/* Check the value */
+	expect_ok(QX_JSON_IS_OBJECT(value));
+	expect_int_equal(QxJsonValue_size(value), 5);
+	expect_zero(QxJsonValue_objectEach(value, &checkRoot, NULL));
+	QxJsonValue_release(value);
 
 	return EXIT_SUCCESS;
 }

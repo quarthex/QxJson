@@ -5,24 +5,116 @@
  */
 
 #include <assert.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <wchar.h>
 
 #include "../include/qx.json.parser.h"
 
-static int feedAfterVoid(QxJsonParser *self, QxJsonToken const *token);
-static int feedAfterValue(QxJsonParser *self, QxJsonToken const *token);
-static int feedAfterArrayBegin(QxJsonParser *self, QxJsonToken const *token);
-static int feedAfterArrayValue(QxJsonParser *self, QxJsonToken const *token);
-static int feedAfterArrayComma(QxJsonParser *self, QxJsonToken const *token);
-static int feedAfterObjectBegin(QxJsonParser *self, QxJsonToken const *token);
-static int feedAfterObjectKey(QxJsonParser *self, QxJsonToken const *token);
-static int feedAfterObjectColon(QxJsonParser *self, QxJsonToken const *token);
-static int feedAfterObjectValue(QxJsonParser *self, QxJsonToken const *token);
-static int feedAfterObjectComma(QxJsonParser *self, QxJsonToken const *token);
+/* Private structure */
+
+typedef struct Step
+{
+	int (*const feed)(QxJsonParser *self, wchar_t character);
+	int (*const end)(QxJsonParser *self);
+} Step;
+
+typedef enum QxJsonTokenType
+{
+	QxJsonTokenString,
+	QxJsonTokenNumber,
+	QxJsonTokenFalse,
+	QxJsonTokenTrue,
+	QxJsonTokenNull,
+	QxJsonTokenBeginArray,
+	QxJsonTokenValuesSeparator,
+	QxJsonTokenEndArray,
+	QxJsonTokenBeginObject,
+	QxJsonTokenNameValueSeparator,
+	QxJsonTokenEndObject
+} QxJsonTokenType;
+
+/* Private functions */
+#define IN_RANGE(value, min, max) (((value) >= (min)) && ((value) <= (max)))
+#define WITHIN_0_9(value)  IN_RANGE((value), L'0', L'9')
+#define WITHIN_1_9(value)  IN_RANGE((value), L'1', L'9')
+#define WITHIN_a_f(value)  IN_RANGE((value), L'a', L'f')
+#define WITHIN_A_F(value)  IN_RANGE((value), L'A', L'F')
+
+static int feedDefault(QxJsonParser *self, wchar_t character);
+static int feedString(QxJsonParser *self, wchar_t character);
+static int feedStringEscape(QxJsonParser *self, wchar_t character);
+static int feedStringUnicode(QxJsonParser *self, wchar_t character);
+static int feedStringUnicode0(QxJsonParser *self, wchar_t character);
+static int feedStringUnicode1(QxJsonParser *self, wchar_t character);
+static int feedStringUnicode2(QxJsonParser *self, wchar_t character);
+static int feedF(QxJsonParser *self, wchar_t character);
+static int feedFa(QxJsonParser *self, wchar_t character);
+static int feedFal(QxJsonParser *self, wchar_t character);
+static int feedFals(QxJsonParser *self, wchar_t character);
+static int feedN(QxJsonParser *self, wchar_t character);
+static int feedNu(QxJsonParser *self, wchar_t character);
+static int feedNul(QxJsonParser *self, wchar_t character);
+static int feedT(QxJsonParser *self, wchar_t character);
+static int feedTr(QxJsonParser *self, wchar_t character);
+static int feedTru(QxJsonParser *self, wchar_t character);
+static int feedNumberMinus(QxJsonParser *self, wchar_t character);
+static int feedNumberZero(QxJsonParser *self, wchar_t character);
+static int feedNumberInteger(QxJsonParser *self, wchar_t character);
+static int feedNumberDot(QxJsonParser *self, wchar_t character);
+static int feedNumberFrac(QxJsonParser *self, wchar_t character);
+static int feedNumberExp(QxJsonParser *self, wchar_t character);
+static int feedNumberExpSign(QxJsonParser *self, wchar_t character);
+static int feedNumberExpInteger(QxJsonParser *self, wchar_t character);
+
+static int endDefault(QxJsonParser *self);
+static int endUnexpected(QxJsonParser *self);
+static int endNumber(QxJsonParser *self);
+
+static int wcharToBuffer(QxJsonParser *self, wchar_t character);
+static int raiseToken(QxJsonParser *self, QxJsonTokenType type);
+
+static int feedAfterVoid(QxJsonParser *self);
+static int feedAfterValue(QxJsonParser *self);
+static int feedAfterArrayBegin(QxJsonParser *self);
+static int feedAfterArrayValue(QxJsonParser *self);
+static int feedAfterArrayComma(QxJsonParser *self);
+static int feedAfterObjectBegin(QxJsonParser *self);
+static int feedAfterObjectKey(QxJsonParser *self);
+static int feedAfterObjectColon(QxJsonParser *self);
+static int feedAfterObjectValue(QxJsonParser *self);
+static int feedAfterObjectComma(QxJsonParser *self);
 static void popStackItem(QxJsonParser *self);
-static QxJsonValue *createValueFromToken(QxJsonParser *self, QxJsonToken const *token);
+static QxJsonValue *createValueFromToken(QxJsonParser *self);
+
+/* Private constants */
+
+static Step const stepDefault = { &feedDefault, &endDefault };
+static Step const stepString = { &feedString, &endUnexpected };
+static Step const stepStringEscape = { &feedStringEscape, endUnexpected };
+static Step const stepStringUnicode  = { &feedStringUnicode  , endUnexpected  };
+static Step const stepStringUnicode0 = { &feedStringUnicode0 , &endUnexpected };
+static Step const stepStringUnicode1 = { &feedStringUnicode1 , &endUnexpected };
+static Step const stepStringUnicode2 = { &feedStringUnicode2 , &endUnexpected };
+static Step const stepF    = { &feedF    , &endUnexpected };
+static Step const stepFa   = { &feedFa   , &endUnexpected };
+static Step const stepFal  = { &feedFal  , &endUnexpected };
+static Step const stepFals = { &feedFals , &endUnexpected };
+static Step const stepN   = { &feedN   , &endUnexpected };
+static Step const stepNu  = { &feedNu  , &endUnexpected };
+static Step const stepNul = { &feedNul , &endUnexpected };
+static Step const stepT   = { &feedT   , &endUnexpected };
+static Step const stepTr  = { &feedTr  , &endUnexpected };
+static Step const stepTru = { &feedTru , &endUnexpected };
+static Step const stepNumberMinus = { &feedNumberMinus , &endUnexpected };
+static Step const stepNumberZero = { &feedNumberZero , endNumber };
+static Step const stepNumberInteger = { &feedNumberInteger , &endNumber };
+static Step const stepNumberDot = { &feedNumberDot , &endUnexpected };
+static Step const stepNumberFrac = { &feedNumberFrac , &endNumber };
+static Step const stepNumberExp = { &feedNumberExp , &endUnexpected };
+static Step const stepNumberExpSign = { &feedNumberExpSign , &endUnexpected };
+static Step const stepNumberExpInteger = { &feedNumberExpInteger, &endNumber };
 
 /* Public implementations */
 
@@ -36,8 +128,16 @@ typedef struct StackValue
 
 struct QxJsonParser
 {
+	/* Token level */
+	Step const *step;
+	QxJsonTokenType type;
+	wchar_t *bufferData;
+	size_t bufferSize;
+	size_t bufferAlloc;
+
+	/* Syntax level */
 	void *key;
-	int(*feed)(QxJsonParser *self, QxJsonToken const *token);
+	int(*feed)(QxJsonParser *self);
 	StackValue head;
 };
 
@@ -50,6 +150,7 @@ QxJsonParser *QxJsonParser_new(void)
 	if (instance)
 	{
 		memset(instance, 0, sizeof(QxJsonParser));
+		instance->step = &stepDefault;
 		instance->feed = &feedAfterVoid;
 	}
 
@@ -77,24 +178,45 @@ void QxJsonParser_release(QxJsonParser *self)
 			}
 		}
 
+		if (self->bufferData)
+		{
+			assert(self->bufferAlloc > 0);
+			free(self->bufferData);
+		}
+
 		free(self);
 	}
 }
 
-int QxJsonParser_feed(QxJsonParser *self, QxJsonToken const *token)
+int QxJsonParser_feed(QxJsonParser *self, wchar_t const *data, size_t size)
 {
-	if (!self || !token)
+	int error = 0;
+
+	if (!self || !data)
 		/* Invalid argument */
 		return -1;
 
-	return (*self->feed)(self, token);
+	for (; size && !error; ++data, --size)
+		error = self->step->feed(self, *data);
+
+	return error;
 }
 
 int QxJsonParser_end(QxJsonParser *self, QxJsonValue **value)
 {
+	int error;
+
 	if (!self || !value)
 		/* Invalid arguments */
 		return -1;
+
+	error = self->step->end(self);
+
+	if (error != 0)
+	{
+		/* Tokenizing error */
+		return error;
+	}
 
 	if (self->head.value && !self->head.next)
 	{
@@ -110,9 +232,9 @@ int QxJsonParser_end(QxJsonParser *self, QxJsonValue **value)
 
 /* Private implementations */
 
-static int feedAfterVoid(QxJsonParser *self, QxJsonToken const *token)
+static int feedAfterVoid(QxJsonParser *self)
 {
-	self->head.value = createValueFromToken(self, token);
+	self->head.value = createValueFromToken(self);
 
 	if (!self->head.value)
 		return -1;
@@ -123,33 +245,41 @@ static int feedAfterVoid(QxJsonParser *self, QxJsonToken const *token)
 	return 0;
 }
 
-static int feedAfterValue(QxJsonParser *self, const QxJsonToken *token)
+static int feedAfterValue(QxJsonParser *self)
 {
 	(void)self;
-	(void)token;
 	return -1;
 }
 
-static int feedAfterArrayBegin(QxJsonParser *self, QxJsonToken const *token)
+static int feedAfterArrayBegin(QxJsonParser *self)
 {
 	QxJsonValue *value;
 
-	switch (token->type)
+	switch (self->type)
 	{
 	case QxJsonTokenEndArray:
 		popStackItem(self);
 		break;
 
 	default:
-		value = createValueFromToken(self, token);
+		value = createValueFromToken(self);
 
 		if (!value)
 			/* Unexpected token */
 			return -1;
 
-		if (QxJsonValue_arrayAppendNew(self->head.next->value, value) != 0)
-			/* Failed to append a value to the array */
-			return -1;
+		switch (QxJsonValue_type(value))
+		{
+		case QxJsonValueTypeArray:
+		case QxJsonValueTypeObject:
+			break;
+
+		default:
+
+			if (QxJsonValue_arrayAppendNew(self->head.next->value, value) != 0)
+				/* Failed to append a value to the array */
+				return -1;
+		}
 
 		self->feed = &feedAfterArrayValue;
 		break;
@@ -158,9 +288,9 @@ static int feedAfterArrayBegin(QxJsonParser *self, QxJsonToken const *token)
 	return 0;
 }
 
-static int feedAfterArrayValue(QxJsonParser *self, QxJsonToken const *token)
+static int feedAfterArrayValue(QxJsonParser *self)
 {
-	switch (token->type)
+	switch (self->type)
 	{
 	case QxJsonTokenEndArray:
 		popStackItem(self);
@@ -178,13 +308,13 @@ static int feedAfterArrayValue(QxJsonParser *self, QxJsonToken const *token)
 	return 0;
 }
 
-static int feedAfterArrayComma(QxJsonParser *self, QxJsonToken const *token)
+static int feedAfterArrayComma(QxJsonParser *self)
 {
 	QxJsonValue *value;
 	StackValue *head;
 
 	head = self->head.next;
-	value = createValueFromToken(self, token);
+	value = createValueFromToken(self);
 
 	if (!value)
 		/* Unexpected token */
@@ -198,12 +328,12 @@ static int feedAfterArrayComma(QxJsonParser *self, QxJsonToken const *token)
 	return 0;
 }
 
-static int feedAfterObjectBegin(QxJsonParser *self, QxJsonToken const *token)
+static int feedAfterObjectBegin(QxJsonParser *self)
 {
-	switch (token->type)
+	switch (self->type)
 	{
 	case QxJsonTokenString:
-		self->key = QxJsonValue_stringNew(token->data, token->size);
+		self->key = QxJsonValue_stringNew(self->bufferData, self->bufferSize);
 
 		if (!self->key)
 			/* Failed to create string value */
@@ -224,9 +354,9 @@ static int feedAfterObjectBegin(QxJsonParser *self, QxJsonToken const *token)
 	return 0;
 }
 
-static int feedAfterObjectKey(QxJsonParser *self, QxJsonToken const *token)
+static int feedAfterObjectKey(QxJsonParser *self)
 {
-	if (token->type != QxJsonTokenNameValueSeparator)
+	if (self->type != QxJsonTokenNameValueSeparator)
 	{
 		/* Unexpected token */
 		return -1;
@@ -236,10 +366,12 @@ static int feedAfterObjectKey(QxJsonParser *self, QxJsonToken const *token)
 	return 0;
 }
 
-static int feedAfterObjectColon(QxJsonParser *self, QxJsonToken const *token)
+static int feedAfterObjectColon(QxJsonParser *self)
 {
-	QxJsonValue *value;
-	value = createValueFromToken(self, token);
+	QxJsonValue *object, *value;
+
+	object = self->head.next->value;
+	value = createValueFromToken(self);
 
 	if (!value)
 		/* Unexpected token */
@@ -247,7 +379,7 @@ static int feedAfterObjectColon(QxJsonParser *self, QxJsonToken const *token)
 
 	assert(self->key != NULL);
 
-	if (QxJsonValue_objectSet(self->head.next->value, self->key, value) != 0)
+	if (QxJsonValue_objectSet(object, self->key, value) != 0)
 		/* Failed to add the new key/value pair */
 		return -1;
 
@@ -255,13 +387,15 @@ static int feedAfterObjectColon(QxJsonParser *self, QxJsonToken const *token)
 	self->key = NULL;
 	QxJsonValue_release(value);
 
-	self->feed = &feedAfterObjectValue;
+	if (self->feed == &feedAfterObjectColon)
+		self->feed = &feedAfterObjectValue;
+
 	return 0;
 }
 
-static int feedAfterObjectValue(QxJsonParser *self, QxJsonToken const *token)
+static int feedAfterObjectValue(QxJsonParser *self)
 {
-	switch (token->type)
+	switch (self->type)
 	{
 	case QxJsonTokenValuesSeparator:
 		self->feed = &feedAfterObjectComma;
@@ -279,14 +413,14 @@ static int feedAfterObjectValue(QxJsonParser *self, QxJsonToken const *token)
 	return 0;
 }
 
-static int feedAfterObjectComma(QxJsonParser *self, QxJsonToken const *token)
+static int feedAfterObjectComma(QxJsonParser *self)
 {
-	if (token->type != QxJsonTokenString)
+	if (self->type != QxJsonTokenString)
 		/* Unexpected token */
 		return -1;
 
 	assert(self->key == NULL);
-	self->key = QxJsonValue_stringNew(token->data, token->size);
+	self->key = QxJsonValue_stringNew(self->bufferData, self->bufferSize);
 
 	if (!self->key)
 		/* Failed to create the string */
@@ -321,22 +455,22 @@ static void popStackItem(QxJsonParser *self)
 	}
 }
 
-static QxJsonValue *createValueFromToken(QxJsonParser *self, QxJsonToken const *token)
+static QxJsonValue *createValueFromToken(QxJsonParser *self)
 {
 	StackValue *item = NULL;
 	double number;
 	wchar_t *endptr;
 
-	switch (token->type)
+	switch (self->type)
 	{
 	case QxJsonTokenString:
-		return QxJsonValue_stringNew(token->data, token->size);
+		return QxJsonValue_stringNew(self->bufferData, self->bufferSize);
 
 	case QxJsonTokenNumber:
 		endptr = NULL;
-		number = wcstod(token->data, &endptr);
+		number = wcstod(self->bufferData, &endptr);
 
-		if (endptr == token->data + token->size)
+		if (endptr == self->bufferData + self->bufferSize)
 			return QxJsonValue_numberNew(number);
 
 		break;
@@ -398,4 +532,532 @@ static QxJsonValue *createValueFromToken(QxJsonParser *self, QxJsonToken const *
 	}
 
 	return NULL;
+}
+
+static int feedDefault(QxJsonParser *self, wchar_t character)
+{
+	assert(self != NULL);
+
+	switch (character)
+	{
+	case L'\t':
+	case L'\n':
+	case L'\r':
+	case L' ':
+		/* Ignored white space */
+		return 0;
+
+	case L'"':
+		self->step = &stepString;
+		self->bufferSize = 0;
+		return 0;
+
+	case L',':
+		return raiseToken(self, QxJsonTokenValuesSeparator);
+
+	case L'-':
+		self->step = &stepNumberMinus;
+		self->bufferSize = 0;
+		return wcharToBuffer(self, L'-');
+
+	case L'0':
+		self->step = &stepNumberZero;
+		self->bufferSize = 0;
+		return wcharToBuffer(self, L'0');
+
+	case L':':
+		return raiseToken(self, QxJsonTokenNameValueSeparator);
+
+	case L'[':
+		return raiseToken(self, QxJsonTokenBeginArray);
+
+	case L']':
+		return raiseToken(self, QxJsonTokenEndArray);
+
+	case L'f':
+		self->step = &stepF;
+		return 0;
+
+	case L'n':
+		self->step = &stepN;
+		return 0;
+
+	case L't':
+		self->step = &stepT;
+		return 0;
+
+	case L'{':
+		return raiseToken(self, QxJsonTokenBeginObject);
+
+	case L'}':
+		return raiseToken(self, QxJsonTokenEndObject);
+
+	default:
+
+		if (WITHIN_1_9(character))
+		{
+			self->step = &stepNumberInteger;
+			self->bufferSize = 0;
+			return wcharToBuffer(self, character);
+		}
+	}
+
+	/* Unexpected character */
+	return -1;
+}
+
+static int feedString(QxJsonParser *self, wchar_t character)
+{
+	switch (character)
+	{
+	case L'"': /* End of the string */
+		return raiseToken(self, QxJsonTokenString);
+
+	case L'\\': /* Escaped sequence */
+		self->step = &stepStringEscape;
+		break;
+
+	default:
+		wcharToBuffer(self, character);
+	}
+
+	return 0;
+}
+
+static int feedStringEscape(QxJsonParser *self, wchar_t character)
+{
+	wchar_t const *const translation =
+		L"\"" L"\""
+		L"/"  L"/"
+		L"\\" L"\\"
+		L"b"  L"\b"
+		L"f"  L"\f"
+		L"r"  L"\r"
+		L"n"  L"\n"
+		L"t"  L"\t";
+	wchar_t const *translationOffset = translation;
+
+	if (character == L'u')
+	{
+		self->step = &stepStringUnicode;
+		return 0;
+	}
+
+	translationOffset = translation;
+
+	while (*translationOffset && (character != *translationOffset))
+	{
+		translationOffset += 2;
+	}
+
+	if (*translationOffset)
+	{
+		self->step = &stepString;
+		return wcharToBuffer(self, *(translationOffset + 1));
+	}
+
+	/* Unsupported escapped sequence */
+	return -1;
+}
+
+static int hexaDigitToValue(wchar_t digit)
+{
+	if (WITHIN_0_9(digit))
+	{
+		return digit - L'0';
+	}
+
+	if (WITHIN_a_f(digit))
+	{
+		return digit - L'a' + 10;
+	}
+
+	if (WITHIN_A_F(digit))
+	{
+		return digit - L'A' + 10;
+	}
+
+	return -1;
+}
+
+static int feedStringUnicode(QxJsonParser *self, wchar_t character)
+{
+	int const value = hexaDigitToValue(character);
+
+	if (value < 0)
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->step = &stepStringUnicode0;
+	return wcharToBuffer(self, value << 24);
+}
+
+static int feedStringUnicode0(QxJsonParser *self, wchar_t character)
+{
+	int const value = hexaDigitToValue(character);
+
+	if (value < 0)
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->step = &stepStringUnicode1;
+	self->bufferData[self->bufferSize] |= value << 16;
+	return 0;
+}
+
+static int feedStringUnicode1(QxJsonParser *self, wchar_t character)
+{
+	int const value = hexaDigitToValue(character);
+
+	if (value < 0)
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->step = &stepStringUnicode2;
+	self->bufferData[self->bufferSize] |= value << 8;
+	return 0;
+}
+
+static int feedStringUnicode2(QxJsonParser *self, wchar_t character)
+{
+	int const value = hexaDigitToValue(character);
+
+	if (value < 0)
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->step = &stepString;
+	self->bufferData[self->bufferSize] |= value;
+	return 0;
+}
+
+static int feedF(QxJsonParser *self, wchar_t character)
+{
+	if (character != L'a')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->step = &stepFa;
+	return 0;
+}
+
+static int feedFa(QxJsonParser *self, wchar_t character)
+{
+	if (character != L'l')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->step = &stepFal;
+	return 0;
+}
+
+static int feedFal(QxJsonParser *self, wchar_t character)
+{
+	if (character != L's')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->step = &stepFals;
+	return 0;
+}
+
+static int feedFals(QxJsonParser *self, wchar_t character)
+{
+	if (character != L'e')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->step = &stepDefault;
+	return raiseToken(self, QxJsonTokenFalse);
+}
+
+static int feedN(QxJsonParser *self, wchar_t character)
+{
+	if (character != L'u')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->step = &stepNu;
+	return 0;
+}
+
+static int feedNu(QxJsonParser *self, wchar_t character)
+{
+	if (character != L'l')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->step = &stepNul;
+	return 0;
+}
+
+static int feedNul(QxJsonParser *self, wchar_t character)
+{
+	if (character != L'l')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	return raiseToken(self, QxJsonTokenNull);
+}
+
+static int feedT(QxJsonParser *self, wchar_t character)
+{
+	if (character != L'r')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->step = &stepTr;
+	return 0;
+}
+
+static int feedTr(QxJsonParser *self, wchar_t character)
+{
+	if (character != L'u')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	self->step = &stepTru;
+	return 0;
+}
+
+static int feedTru(QxJsonParser *self, wchar_t character)
+{
+	if (character != L'e')
+	{
+		/* Unexpected character */
+		return -1;
+	}
+
+	return raiseToken(self, QxJsonTokenTrue);
+}
+
+static int feedNumberMinus(QxJsonParser *self, wchar_t character)
+{
+	if (character == L'0')
+	{
+		wcharToBuffer(self, L'0');
+		self->step = &stepNumberZero;
+		return 0;
+	}
+
+	if (WITHIN_1_9(character))
+	{
+		wcharToBuffer(self, character);
+		self->step = &stepNumberInteger;
+		return 0;
+	}
+
+	/* Unexpected character */
+	return -1;
+}
+
+static int feedNumberZero(QxJsonParser *self, wchar_t character)
+{
+	int error;
+
+	if (character == L'.')
+	{
+		wcharToBuffer(self, L'.');
+		self->step = &stepNumberDot;
+		return 0;
+	}
+
+	if ((character == L'e') || (character == L'E'))
+	{
+		wcharToBuffer(self, character);
+		self->step = &stepNumberExp;
+		return 0;
+	}
+
+	/* Maybe a new token */
+	error = endNumber(self);
+	assert(self->step == &stepDefault);
+	return error ? error : feedDefault(self, character);
+}
+
+static int feedNumberInteger(QxJsonParser *self, wchar_t character)
+{
+	if (WITHIN_0_9(character))
+	{
+		wcharToBuffer(self, character);
+		return 0;
+	}
+
+	/* Same expectations that after 0 */
+	return feedNumberZero(self, character);
+}
+
+static int feedNumberDot(QxJsonParser *self, wchar_t character)
+{
+	if (WITHIN_0_9(character))
+	{
+		wcharToBuffer(self, character);
+		self->step = &stepNumberFrac;
+		return 0;
+	}
+
+	/* Unexpected character */
+	return -1;
+}
+
+static int feedNumberFrac(QxJsonParser *self, wchar_t character)
+{
+	int error;
+
+	if (WITHIN_0_9(character))
+	{
+		wcharToBuffer(self, character);
+		return 0;
+	}
+
+	if ((character == L'e') || (character == L'E'))
+	{
+		wcharToBuffer(self, character);
+		self->step = &stepNumberExp;
+		return 0;
+	}
+
+	/* Maybe a new token */
+	error = endNumber(self);
+	assert(self->step == &stepDefault);
+	return error ? error : feedDefault(self, character);
+}
+
+static int feedNumberExp(QxJsonParser *self, wchar_t character)
+{
+	if ((character == L'-') || (character == L'+'))
+	{
+		wcharToBuffer(self, character);
+		self->step = &stepNumberExpSign;
+		return 0;
+	}
+
+	/* Same expectation as exponent sign */
+	return feedNumberExpSign(self, character);
+}
+
+static int feedNumberExpSign(QxJsonParser *self, wchar_t character)
+{
+	if (WITHIN_0_9(character))
+	{
+		wcharToBuffer(self, character);
+		self->step = &stepNumberExpInteger;
+		return 0;
+	}
+
+	/* Unexpected character */
+	return -1;
+}
+
+static int feedNumberExpInteger(QxJsonParser *self, wchar_t character)
+{
+	int error;
+
+	if (WITHIN_0_9(character))
+	{
+		wcharToBuffer(self, character);
+		self->step = &stepNumberExpInteger;
+		return 0;
+	}
+
+	/* Maybe a new token */
+	error = endNumber(self);
+	assert(self->step == &stepDefault);
+	return error ? error : feedDefault(self, character);
+}
+
+static int endDefault(QxJsonParser *self)
+{
+	(void)self;
+	return 0;
+}
+
+static int endUnexpected(QxJsonParser *self)
+{
+	(void)self;
+	return -1;
+}
+
+static int endNumber(QxJsonParser *self)
+{
+	return raiseToken(self, QxJsonTokenNumber);
+}
+
+static int wcharToBuffer(QxJsonParser *self, wchar_t character)
+{
+	wchar_t *dataTmp;
+
+	if (self->bufferAlloc == self->bufferSize)
+	{
+		self->bufferAlloc += 512;
+		dataTmp = (wchar_t *)realloc(self->bufferData,
+			self->bufferAlloc * sizeof(wchar_t));
+
+		if (!dataTmp)
+		{
+			/* Memory allocation failed */
+			self->bufferAlloc -= 512;
+			return -1;
+		}
+
+#ifndef NDEBUG
+		/* Be kind with Valgrind */
+		memset(dataTmp + (self->bufferAlloc - 512) * sizeof(wchar_t), 0, 512);
+#endif
+		self->bufferData = dataTmp;
+	}
+
+	self->bufferData[self->bufferSize] = character;
+	++self->bufferSize;
+	return 0;
+}
+
+static int raiseToken(QxJsonParser *self, QxJsonTokenType type)
+{
+	int error;
+
+	self->step = &stepDefault;
+	self->type = type;
+
+	if (self->bufferSize)
+	{
+		/* Add a trailing nul character */
+		error = wcharToBuffer(self, L'\0');
+
+		if (error)
+		{
+			return error;
+		}
+
+		/* minus the trailing nul character */
+		--self->bufferSize;
+	}
+
+	return (*self->feed)(self);
 }
