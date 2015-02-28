@@ -88,6 +88,8 @@ static int checkPhoneNumber(size_t index, QxJsonValue *value, void *ptr)
 		expect_not_null(subvalue);
 		expect_wstr_equal(QxJsonValue_stringValue(subvalue), L"646 555-4567");
 
+		break;
+
 	default:
 		return -1;
 	}
@@ -131,7 +133,7 @@ static int checkRoot(QxJsonValue const *key, QxJsonValue *value, void *ptr)
 	else if (wcscmp(keyStr, L"phoneNumber") == 0)
 	{
 		expect_ok(QX_JSON_IS_ARRAY(value));
-		expect_int_equal(QxJsonValue_size(value), 4);
+		expect_int_equal(QxJsonValue_size(value), 2);
 		expect_zero(QxJsonValue_arrayEach(value, &checkPhoneNumber, NULL));
 	}
 	else

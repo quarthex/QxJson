@@ -153,7 +153,7 @@ QX_API int QxJsonValue_arrayInsertNew(QxJsonValue *self, size_t index, QxJsonVal
  * @param index The index of the value in the array.
  * @return The value on success. A null pointer otherwise.
  */
-QX_API QxJsonValue const *QxJsonValue_arrayGet(QxJsonValue *self, size_t index);
+QX_API QxJsonValue const *QxJsonValue_arrayGet(QxJsonValue const *self, size_t index);
 
 /**
  * @brief Walk throught an array.

@@ -35,10 +35,10 @@ void __expect_double_equal(char const *file, int line,
 /* Pointers */
 #define expect_null(pointer) \
 	__expect(__FILE__, __LINE__, (pointer) == NULL, \
-	"" #pointer " expected to be null but is actually %p", (pointer))
+	"%s expected to be null but is actually %p", #pointer, (pointer))
 #define expect_not_null(pointer) \
 	__expect(__FILE__, __LINE__, (pointer) != NULL, \
-	"" #pointer " expected not to be null")
+	"%s expected not to be null", #pointer)
 
 /* Strings */
 void __expect_str_equal(char const *file, int line,

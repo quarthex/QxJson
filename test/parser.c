@@ -31,6 +31,37 @@ static void testArray(void)
 	QxJsonValue_release(root);
 }
 
+static void testNestedArray(void)
+{
+	QxJsonParser *parser;
+	QxJsonValue *root = NULL;
+	QxJsonValue const *child;
+
+	parser = QxJsonParser_new();
+	expect_not_null(parser);
+
+	expect_zero(QxJsonParser_feed(parser, L"[[[]]]", 6));
+
+	expect_zero(QxJsonParser_end(parser, &root));
+	QxJsonParser_release(parser);
+
+	expect_not_null(root);
+	expect_ok(QX_JSON_IS_ARRAY(root));
+	expect_int_equal(QxJsonValue_size(root), 1);
+
+	child = QxJsonValue_arrayGet(root, 0);
+	expect_not_null(child);
+	expect_ok(QX_JSON_IS_ARRAY(child));
+	expect_int_equal(QxJsonValue_size(child), 1);
+
+	child = QxJsonValue_arrayGet(child, 0);
+	expect_not_null(child);
+	expect_ok(QX_JSON_IS_ARRAY(child));
+	expect_zero(QxJsonValue_size(child));
+
+	QxJsonValue_release(root);
+}
+
 static void testFalse(void)
 {
 	QxJsonParser *parser;
@@ -147,6 +178,7 @@ static void testTrue(void)
 int main(void)
 {
 	testArray();
+	testNestedArray();
 	testFalse();
 	testNull();
 	testNumber();

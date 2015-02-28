@@ -16,8 +16,8 @@
 
 typedef struct Step
 {
-	int (*const feed)(QxJsonParser *self, wchar_t character);
-	int (*const end)(QxJsonParser *self);
+	int (*const feedChar)(QxJsonParser *self, wchar_t character);
+	int (*const endOfStream)(QxJsonParser *self);
 } Step;
 
 typedef enum QxJsonTokenType
@@ -35,7 +35,16 @@ typedef enum QxJsonTokenType
 	QxJsonTokenEndObject
 } QxJsonTokenType;
 
+typedef struct StackValue
+{
+	QxJsonValue *value;
+	struct StackValue *next;
+} StackValue;
+
+#define StackValue_alloc() ((StackValue *)malloc(sizeof(StackValue)))
+
 /* Private functions */
+
 #define IN_RANGE(value, min, max) (((value) >= (min)) && ((value) <= (max)))
 #define WITHIN_0_9(value)  IN_RANGE((value), L'0', L'9')
 #define WITHIN_1_9(value)  IN_RANGE((value), L'1', L'9')
@@ -118,26 +127,18 @@ static Step const stepNumberExpInteger = { &feedNumberExpInteger, &endNumber };
 
 /* Public implementations */
 
-typedef struct StackValue
-{
-	QxJsonValue *value;
-	struct StackValue *next;
-} StackValue;
-
-#define StackValue_alloc() ((StackValue *)malloc(sizeof(StackValue)))
-
 struct QxJsonParser
 {
 	/* Token level */
 	Step const *step;
-	QxJsonTokenType type;
+	QxJsonTokenType tokenType;
 	wchar_t *bufferData;
 	size_t bufferSize;
 	size_t bufferAlloc;
 
 	/* Syntax level */
-	void *key;
-	int(*feed)(QxJsonParser *self);
+	QxJsonValue *key;
+	int(*feedToken)(QxJsonParser *self);
 	StackValue head;
 };
 
@@ -151,7 +152,7 @@ QxJsonParser *QxJsonParser_new(void)
 	{
 		memset(instance, 0, sizeof(QxJsonParser));
 		instance->step = &stepDefault;
-		instance->feed = &feedAfterVoid;
+		instance->feedToken = &feedAfterVoid;
 	}
 
 	return instance;
@@ -197,7 +198,7 @@ int QxJsonParser_feed(QxJsonParser *self, wchar_t const *data, size_t size)
 		return -1;
 
 	for (; size && !error; ++data, --size)
-		error = self->step->feed(self, *data);
+		error = self->step->feedChar(self, *data);
 
 	return error;
 }
@@ -210,7 +211,7 @@ int QxJsonParser_end(QxJsonParser *self, QxJsonValue **value)
 		/* Invalid arguments */
 		return -1;
 
-	error = self->step->end(self);
+	error = self->step->endOfStream(self);
 
 	if (error != 0)
 	{
@@ -218,16 +219,16 @@ int QxJsonParser_end(QxJsonParser *self, QxJsonValue **value)
 		return error;
 	}
 
-	if (self->head.value && !self->head.next)
+	if (!self->head.value || self->head.next)
 	{
-		*value = self->head.value;
-		self->head.value = NULL;
-		self->feed = &feedAfterVoid;
-		return 0;
+		/* Value is not ready */
+		return -1;
 	}
 
-	/* Value is not ready */
-	return -1;
+	*value = self->head.value;
+	self->head.value = NULL;
+	self->feedToken = &feedAfterVoid;
+	return 0;
 }
 
 /* Private implementations */
@@ -237,10 +238,11 @@ static int feedAfterVoid(QxJsonParser *self)
 	self->head.value = createValueFromToken(self);
 
 	if (!self->head.value)
+		/* Unexpected token */
 		return -1;
 
-	if (self->feed == &feedAfterVoid)
-		self->feed = &feedAfterValue;
+	if (self->feedToken == &feedAfterVoid)
+		self->feedToken = &feedAfterValue;
 
 	return 0;
 }
@@ -248,24 +250,34 @@ static int feedAfterVoid(QxJsonParser *self)
 static int feedAfterValue(QxJsonParser *self)
 {
 	(void)self;
+	/* A root value is ready.
+	 * Get it using QxJsonParser_end().
+	 */
 	return -1;
 }
 
 static int feedAfterArrayBegin(QxJsonParser *self)
 {
+	QxJsonValue *array;
 	QxJsonValue *value;
 
-	switch (self->type)
+	switch (self->tokenType)
 	{
 	case QxJsonTokenEndArray:
 		popStackItem(self);
 		break;
 
 	default:
+		array = self->head.next->value;
+		assert(QX_JSON_IS_ARRAY(array));
 		value = createValueFromToken(self);
 
 		if (!value)
 			/* Unexpected token */
+			return -1;
+
+		if (QxJsonValue_arrayAppendNew(array, value) != 0)
+			/* Failed to append a value to the array */
 			return -1;
 
 		switch (QxJsonValue_type(value))
@@ -275,13 +287,9 @@ static int feedAfterArrayBegin(QxJsonParser *self)
 			break;
 
 		default:
-
-			if (QxJsonValue_arrayAppendNew(self->head.next->value, value) != 0)
-				/* Failed to append a value to the array */
-				return -1;
+			self->feedToken = &feedAfterArrayValue;
 		}
 
-		self->feed = &feedAfterArrayValue;
 		break;
 	}
 
@@ -290,14 +298,14 @@ static int feedAfterArrayBegin(QxJsonParser *self)
 
 static int feedAfterArrayValue(QxJsonParser *self)
 {
-	switch (self->type)
+	switch (self->tokenType)
 	{
 	case QxJsonTokenEndArray:
 		popStackItem(self);
 		break;
 
 	case QxJsonTokenValuesSeparator:
-		self->feed = &feedAfterArrayComma;
+		self->feedToken = &feedAfterArrayComma;
 		break;
 
 	default:
@@ -310,27 +318,35 @@ static int feedAfterArrayValue(QxJsonParser *self)
 
 static int feedAfterArrayComma(QxJsonParser *self)
 {
-	QxJsonValue *value;
-	StackValue *head;
-
-	head = self->head.next;
-	value = createValueFromToken(self);
+	QxJsonValue *array = self->head.next->value;
+	QxJsonValue *const value = createValueFromToken(self);
 
 	if (!value)
 		/* Unexpected token */
 		return -1;
 
-	if (QxJsonValue_arrayAppendNew(head->value, value) != 0)
+	assert(QX_JSON_IS_ARRAY(array));
+
+	if (QxJsonValue_arrayAppendNew(array, value) != 0)
 		/* Failed to append a value to the array */
 		return -1;
 
-	self->feed = &feedAfterArrayValue;
+	switch (QxJsonValue_type(value))
+	{
+	case QxJsonValueTypeArray:
+	case QxJsonValueTypeObject:
+		break;
+
+	default:
+		self->feedToken = &feedAfterArrayValue;
+	}
+
 	return 0;
 }
 
 static int feedAfterObjectBegin(QxJsonParser *self)
 {
-	switch (self->type)
+	switch (self->tokenType)
 	{
 	case QxJsonTokenString:
 		self->key = QxJsonValue_stringNew(self->bufferData, self->bufferSize);
@@ -339,7 +355,7 @@ static int feedAfterObjectBegin(QxJsonParser *self)
 			/* Failed to create string value */
 			return -1;
 
-		self->feed = &feedAfterObjectKey;
+		self->feedToken = &feedAfterObjectKey;
 		break;
 
 	case QxJsonTokenEndObject:
@@ -356,13 +372,13 @@ static int feedAfterObjectBegin(QxJsonParser *self)
 
 static int feedAfterObjectKey(QxJsonParser *self)
 {
-	if (self->type != QxJsonTokenNameValueSeparator)
+	if (self->tokenType != QxJsonTokenNameValueSeparator)
 	{
 		/* Unexpected token */
 		return -1;
 	}
 
-	self->feed = &feedAfterObjectColon;
+	self->feedToken = &feedAfterObjectColon;
 	return 0;
 }
 
@@ -387,18 +403,18 @@ static int feedAfterObjectColon(QxJsonParser *self)
 	self->key = NULL;
 	QxJsonValue_release(value);
 
-	if (self->feed == &feedAfterObjectColon)
-		self->feed = &feedAfterObjectValue;
+	if (self->feedToken == &feedAfterObjectColon)
+		self->feedToken = &feedAfterObjectValue;
 
 	return 0;
 }
 
 static int feedAfterObjectValue(QxJsonParser *self)
 {
-	switch (self->type)
+	switch (self->tokenType)
 	{
 	case QxJsonTokenValuesSeparator:
-		self->feed = &feedAfterObjectComma;
+		self->feedToken = &feedAfterObjectComma;
 		break;
 
 	case QxJsonTokenEndObject:
@@ -415,7 +431,7 @@ static int feedAfterObjectValue(QxJsonParser *self)
 
 static int feedAfterObjectComma(QxJsonParser *self)
 {
-	if (self->type != QxJsonTokenString)
+	if (self->tokenType != QxJsonTokenString)
 		/* Unexpected token */
 		return -1;
 
@@ -426,14 +442,13 @@ static int feedAfterObjectComma(QxJsonParser *self)
 		/* Failed to create the string */
 		return -1;
 
-	self->feed = &feedAfterObjectKey;
+	self->feedToken = &feedAfterObjectKey;
 	return 0;
 }
 
 static void popStackItem(QxJsonParser *self)
 {
-	StackValue *item;
-	item = self->head.next;
+	StackValue *item = self->head.next;
 	self->head.next = item->next;
 	free(item);
 
@@ -441,17 +456,17 @@ static void popStackItem(QxJsonParser *self)
 	{
 		if (QX_JSON_IS_ARRAY(self->head.next->value))
 		{
-			self->feed = &feedAfterArrayValue;
+			self->feedToken = &feedAfterArrayValue;
 		}
 		else
 		{
 			assert(QX_JSON_IS_OBJECT(self->head.next->value));
-			self->feed = &feedAfterObjectValue;
+			self->feedToken = &feedAfterObjectValue;
 		}
 	}
 	else
 	{
-		self->feed = &feedAfterValue;
+		self->feedToken = &feedAfterValue;
 	}
 }
 
@@ -461,7 +476,7 @@ static QxJsonValue *createValueFromToken(QxJsonParser *self)
 	double number;
 	wchar_t *endptr;
 
-	switch (self->type)
+	switch (self->tokenType)
 	{
 	case QxJsonTokenString:
 		return QxJsonValue_stringNew(self->bufferData, self->bufferSize);
@@ -493,7 +508,7 @@ static QxJsonValue *createValueFromToken(QxJsonParser *self)
 			item->value = QxJsonValue_arrayNew();
 
 			if (item->value)
-				self->feed = &feedAfterArrayBegin;
+				self->feedToken = &feedAfterArrayBegin;
 		}
 
 		/* Allocation error */
@@ -508,7 +523,7 @@ static QxJsonValue *createValueFromToken(QxJsonParser *self)
 			item->value = QxJsonValue_objectNew();
 
 			if (item->value)
-				self->feed = &feedAfterObjectBegin;
+				self->feedToken = &feedAfterObjectBegin;
 		}
 
 		/* Allocation error */
@@ -1043,7 +1058,7 @@ static int raiseToken(QxJsonParser *self, QxJsonTokenType type)
 	int error;
 
 	self->step = &stepDefault;
-	self->type = type;
+	self->tokenType = type;
 
 	if (self->bufferSize)
 	{
@@ -1059,5 +1074,5 @@ static int raiseToken(QxJsonParser *self, QxJsonTokenType type)
 		--self->bufferSize;
 	}
 
-	return (*self->feed)(self);
+	return (*self->feedToken)(self);
 }

@@ -259,7 +259,7 @@ int QxJsonValue_arrayInsertNew(QxJsonValue *self, size_t index, QxJsonValue *val
 	return 0;
 }
 
-QxJsonValue const *QxJsonValue_arrayGet(QxJsonValue *self, size_t index)
+QxJsonValue const *QxJsonValue_arrayGet(QxJsonValue const *self, size_t index)
 {
 	ArrayNode *node;
 
@@ -500,7 +500,7 @@ int QxJsonValue_objectGet(QxJsonValue *self, const QxJsonValue *key,
 	node = end->next;
 
 	for (; node != end; node = node->next)
-		if (compareKey(node->key, key) == 0)
+		if (compareKey(node->key, key))
 		{
 			*value = node->value;
 			return 0;
