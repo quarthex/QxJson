@@ -7,6 +7,8 @@
 #ifndef _H_QX_JSON_VALUE
 #define _H_QX_JSON_VALUE
 
+#include <stddef.h>
+
 #include "qx.json.macro.h"
 
 /**

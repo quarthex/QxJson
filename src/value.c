@@ -399,7 +399,7 @@ static int compareKey(QxJsonValue const *first, QxJsonValue const *last)
 	firstData = first->data.string;
 	lastData = last->data.string;
 
-	for (; keySize; --keySize)
+	for (; keySize; --keySize, ++firstData, ++lastData)
 	{
 		if (*firstData != *lastData)
 			/* Different data */
@@ -507,6 +507,7 @@ int QxJsonValue_objectGet(QxJsonValue *self, const QxJsonValue *key,
 		}
 
 	/* Not found */
+	*value = NULL;
 	return -1;
 }
 
