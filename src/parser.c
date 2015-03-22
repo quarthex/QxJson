@@ -874,22 +874,27 @@ static int feedTru(QxJsonParser *self, wchar_t character)
 
 static int feedNumberMinus(QxJsonParser *self, wchar_t character)
 {
-	if (character == L'0')
-	{
-		wcharToBuffer(self, L'0');
-		self->step = &stepNumberZero;
-		return 0;
-	}
-
-	if (WITHIN_1_9(character))
-	{
-		wcharToBuffer(self, character);
-		self->step = &stepNumberInteger;
-		return 0;
-	}
-
 	/* Unexpected character */
-	return -1;
+	int error = -1;
+
+	if (WITHIN_0_9(character))
+	{
+		error = wcharToBuffer(self, character);
+	}
+
+	if (error == 0)
+	{
+		if (character == L'0')
+		{
+			self->step = &stepNumberZero;
+		}
+		else
+		{
+			self->step = &stepNumberInteger;
+		}
+	}
+
+	return error;
 }
 
 static int feedNumberZero(QxJsonParser *self, wchar_t character)
