@@ -175,6 +175,49 @@ static void testTrue(void)
 	QxJsonValue_release(root);
 }
 
+static void testPartialTocken(void)
+{
+	/* The parser should raise an error when a unexpected token begins to
+	 * be fed.
+	 *
+	 * Tokens that can be partially parsed are:
+	 *      - strings
+	 *      - numbers
+	 *      - false/true/null
+	 */
+
+	wchar_t const *testCases[] = {
+		L"[0 \"",       /* '[' <value> <string>  */
+		L"[0 0",        /* '[' <value> <number>  */
+		L"[0 f",        /* '[' <value> 'false'   */
+		L"[0 t",        /* '[' <value> 'true'    */
+		L"[0 n",        /* '[' <value> 'null'    */
+		L"{0",          /* '{' <number>          */
+		L"{f",          /* '{' 'false'           */
+		L"{t",          /* '{' 'true'            */
+		L"{n",          /* '{' 'null'            */
+		L"{\"foo\" \"", /* '{' <string> <string> */
+		L"{\"foo\" 0",  /* '{' <string> <number> */
+		L"{\"foo\" f",  /* '{' <string> 'false'  */
+		L"{\"foo\" t",  /* '{' <string> 'true'   */
+		L"{\"foo\" n",  /* '{' <string> 'null'   */
+	};
+	size_t idx;
+
+	for (idx = 0; idx < sizeof(testCases) /  sizeof(testCases[0]); ++idx)
+	{
+		wchar_t const *testCase = testCases[idx];
+		QxJsonParser *parser;
+
+		parser = QxJsonParser_new();
+		expect_not_null(parser);
+
+		expect_not_zero(QxJsonParser_feed(parser, testCase, wcslen(testCase)));
+
+		QxJsonParser_release(parser);
+	}
+}
+
 int main(void)
 {
 	testArray();
@@ -185,5 +228,6 @@ int main(void)
 	testObject();
 	testString();
 	testTrue();
+	testPartialTocken();
 	return EXIT_SUCCESS;
 }

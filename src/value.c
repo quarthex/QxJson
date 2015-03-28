@@ -37,7 +37,7 @@ struct ObjectNode
 #define ObjectNode_delete(node) do {  \
 	QxJsonValue_release((node)->key);   \
 	QxJsonValue_release((node)->value); \
-	free((node));                      \
+	free((node));                       \
 } while (0)
 
 struct QxJsonValue
