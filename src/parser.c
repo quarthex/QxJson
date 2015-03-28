@@ -169,7 +169,6 @@ struct QxJsonParser
 	/* Syntax level */
 	QxJsonValue *key;
 	SyntaxStep const *syntaxStep;
-	int(*feedToken)(QxJsonParser *self);
 	StackValue head;
 };
 
