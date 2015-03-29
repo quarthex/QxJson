@@ -1,0 +1,14 @@
+language: c
+
+compiler:
+    - clang
+    - gcc
+
+before_script:
+    - mkdir build
+    - cd build
+    - cmake ../cmake
+
+script:
+    - make all
+    - make test

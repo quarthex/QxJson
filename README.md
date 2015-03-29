@@ -20,3 +20,8 @@ Otherwise, you could just
 ```sh
 gcc src/*.c -fPIC -shared -o libQxJson.so;
 ```
+
+# License
+
+This project is released under the MIT Licence.
+
