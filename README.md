@@ -21,7 +21,7 @@ Otherwise, you could just
 gcc src/*.c -fPIC -shared -o libQxJson.so;
 ```
 
-# License
+## License
 
 This project is released under the MIT Licence.
 
