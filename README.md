@@ -1,4 +1,4 @@
-# QxJson
+# QxJson <img src=https://travis-ci.org/quarthex/QxJson.svg>
 
 This is my own implementation of a JSON parser.  
 It is written in pure C89.  
