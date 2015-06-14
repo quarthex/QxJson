@@ -32,13 +32,13 @@ typedef struct QxJsonValue QxJsonValue;
 
 /**
  * @brief Increment the reference counter of a value.
- * @param value The value.
+ * @param self The value.
  */
 QX_API void QxJsonValue_retains(QxJsonValue *self);
 
 /**
  * @brief Decrement the reference counter of a value.
- * @param value The value.
+ * @param self The value.
  *
  * When the reference counter reach zero, the value is freed.
  */
@@ -46,7 +46,7 @@ QX_API void QxJsonValue_release(QxJsonValue *self);
 
 /**
  * @brief Get the type of the value.
- * @param The value.
+ * @param self The value.
  * @return The unique identifier of the type of the value.
  */
 QX_API QxJsonValueType QxJsonValue_type(QxJsonValue const *self);
@@ -59,12 +59,19 @@ QX_API QxJsonValueType QxJsonValue_type(QxJsonValue const *self);
  */
 #define QX_JSON_IS(value, type) \
 	(QxJsonValue_type(value) == QxJsonValueType##type)
+/** 1 if @c value is an array */
 #define QX_JSON_IS_ARRAY(value)  QX_JSON_IS((value), Array)
+/** 1 if @c value is False */
 #define QX_JSON_IS_FALSE(value)  QX_JSON_IS((value), False)
+/** 1 if @c value is Null */
 #define QX_JSON_IS_NULL(value)   QX_JSON_IS((value), Null)
+/** 1 if @c value is a number */
 #define QX_JSON_IS_NUMBER(value) QX_JSON_IS((value), Number)
+/** 1 if @c value is an object */
 #define QX_JSON_IS_OBJECT(value) QX_JSON_IS((value), Object)
+/** 1 if @c value is a string */
 #define QX_JSON_IS_STRING(value) QX_JSON_IS((value), String)
+/** 1 if @c value is True */
 #define QX_JSON_IS_TRUE(value)   QX_JSON_IS((value), True)
 
 /**
@@ -89,7 +96,7 @@ QX_API QxJsonValue *QxJsonValue_arrayNew(void);
 
 /**
  * @brief Append a value to the array.
- * @param array The array.
+ * @param self  The array.
  * @param value The value to be appended.
  * @return 0 on success.
  *
@@ -99,7 +106,7 @@ QX_API int QxJsonValue_arrayAppend(QxJsonValue *self, QxJsonValue *value);
 
 /**
  * @brief Append a value to the array.
- * @param array The array.
+ * @param self  The array.
  * @param value The value to be appended.
  * @return 0 on success.
  *
@@ -109,7 +116,7 @@ QX_API int QxJsonValue_arrayAppendNew(QxJsonValue *self, QxJsonValue *value);
 
 /**
  * @brief Prepend a value to the array.
- * @param array The array.
+ * @param self  The array.
  * @param value The value to be prepended.
  * @return 0 on success.
  *
@@ -119,7 +126,7 @@ QX_API int QxJsonValue_arrayPrepend(QxJsonValue *self, QxJsonValue *value);
 
 /**
  * @brief Prepend a value to the array.
- * @param array The array.
+ * @param self  The array.
  * @param value The value to be prepended.
  * @return 0 on success.
  *
@@ -129,7 +136,7 @@ QX_API int QxJsonValue_arrayPrependNew(QxJsonValue *self, QxJsonValue *value);
 
 /**
  * @brief Insert a value into the array.
- * @param array The array.
+ * @param self  The array.
  * @param index The index where the value must be inserted.
  * @param value The value to insert.
  * @return 0 on success.
@@ -140,7 +147,7 @@ QX_API int QxJsonValue_arrayInsert(QxJsonValue *self, size_t index, QxJsonValue 
 
 /**
  * @brief Insert a value into the array.
- * @param array The array.
+ * @param self  The array.
  * @param index The index where the value must be inserted.
  * @param value The value to insert.
  * @return 0 on success.
@@ -212,8 +219,8 @@ QX_API QxJsonValue *QxJsonValue_objectNew(void);
 
 /**
  * @brief Associate a value to a key in the object.
- * @param object The object to be modified.
- * @param key The altered key.
+ * @param self  The object to be modified.
+ * @param key   The altered key.
  * @param value The associated value.
  * @return 0 if the value have successfully been associated to the key.
  * @warning The internal reference counter of the value is not incremented.
@@ -222,8 +229,8 @@ QX_API int QxJsonValue_objectSet(QxJsonValue *self, QxJsonValue *key, QxJsonValu
 
 /**
  * @brief Remove a key from the object.
- * @param object The object to be modified.
- * @param key The key to be removed.
+ * @param self The object to be modified.
+ * @param key  The key to be removed.
  * @return 0 if the key have successfully be removed or if it did not exists.
  */
 QX_API int QxJsonValue_objectUnset(QxJsonValue *self, QxJsonValue *key);
